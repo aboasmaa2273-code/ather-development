@@ -200,9 +200,13 @@ export const VisitReportModal: React.FC<VisitReportModalProps> = ({
             <div className="text-center">
               <div className="w-16 h-16 mx-auto rounded-full border border-[#C6A66A] p-1 bg-[#F2EBDD]/20 overflow-hidden flex items-center justify-center">
                 <img
-                  src={platformSettings.logoUrl || schoolLogoFallback}
+                  src={platformSettings.logoUrl && !platformSettings.logoUrl.startsWith('assets/') ? platformSettings.logoUrl : schoolLogoFallback}
                   alt="شعار مدرسة الصدارة"
                   className="w-full h-full object-contain"
+                  onError={(event) => {
+                    const image = event.currentTarget;
+                    if (image.src !== schoolLogoFallback) image.src = schoolLogoFallback;
+                  }}
                 />
               </div>
               <div className="text-[10px] text-slate-400 mt-1 font-mono">{visit.id}</div>
