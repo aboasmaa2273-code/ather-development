@@ -781,7 +781,19 @@ export class AtharStorageService {
       return { success: false, error: 'تعديل إعدادات وهوية المنصة مقتصر على مسؤول النظام.' };
     }
 
-    setStored(STORAGE_KEYS.PLATFORM_SETTINGS, settings);
+    try {
+      localStorage.setItem(STORAGE_KEYS.PLATFORM_SETTINGS, JSON.stringify(settings));
+      const saved = localStorage.getItem(STORAGE_KEYS.PLATFORM_SETTINGS);
+      if (!saved) throw new Error('Settings were not persisted');
+      const parsed = JSON.parse(saved) as PlatformSettings;
+      if ((settings.logoUrl && parsed.logoUrl !== settings.logoUrl) ||
+          (settings.homeImageUrl && parsed.homeImageUrl !== settings.homeImageUrl)) {
+        throw new Error('Uploaded image verification failed');
+      }
+    } catch (error) {
+      console.error('Could not persist platform settings:', error);
+      return { success: false, error: 'تعذّر حفظ الصور بسبب سعة التخزين في المتصفح. أعد اختيار الصورة بعد تصغير حجمها، ثم حاول الحفظ مرة أخرى.' };
+    }
     this.logAction(currentUser, 'تحديث هوية وإعدادات المنصة', `تم حفظ إعدادات: ${settings.platformName} - ${settings.schoolName}`);
     return { success: true };
   }
