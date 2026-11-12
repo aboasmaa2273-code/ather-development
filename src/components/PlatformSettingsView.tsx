@@ -110,25 +110,50 @@ export const PlatformSettingsView: React.FC<PlatformSettingsViewProps> = ({
   };
 
   // Upload optimized-size image assets into the platform's saved settings.
-  const handleImageUpload = (file: File | undefined, target: 'logo' | 'home') => {
+  const handleImageUpload = async (file: File | undefined, target: 'logo' | 'home') => {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
       showFeedback('error', isEn ? 'Please choose an image file.' : 'يرجى اختيار ملف صورة صالح.');
       return;
     }
-    if (file.size > 1200 * 1024) {
-      showFeedback('error', isEn ? 'Image must be 1.2 MB or smaller.' : 'يجب ألا يتجاوز حجم الصورة 1.2 ميجابايت.');
+    if (file.size > 8 * 1024 * 1024) {
+      showFeedback('error', isEn ? 'Image must be 8 MB or smaller.' : 'يجب ألا يتجاوز حجم الصورة 8 ميجابايت.');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const value = String(reader.result || '');
+    try {
+      // Compress before saving: large base64 images can silently exceed browser
+      // localStorage quota, which previously made the upload appear successful
+      // while the homepage/report never received the saved image.
+      const bitmap = await createImageBitmap(file);
+      const maxEdge = target === 'logo' ? 900 : 1600;
+      const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Canvas unavailable');
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close();
+      let quality = 0.82;
+      let value = canvas.toDataURL('image/jpeg', quality);
+      while (value.length > 650000 && quality > 0.48) {
+        quality -= 0.08;
+        value = canvas.toDataURL('image/jpeg', quality);
+      }
+      if (value.length > 900000) {
+        const smaller = document.createElement('canvas');
+        smaller.width = Math.round(canvas.width * 0.75);
+        smaller.height = Math.round(canvas.height * 0.75);
+        smaller.getContext('2d')?.drawImage(canvas, 0, 0, smaller.width, smaller.height);
+        value = smaller.toDataURL('image/jpeg', 0.62);
+      }
       if (target === 'logo') setLogoUrl(value);
       else setHomeImageUrl(value);
-      showFeedback('success', isEn ? 'Image selected. Save platform settings to apply it.' : 'تم اختيار الصورة. احفظ إعدادات المنصة لتطبيقها.');
-    };
-    reader.onerror = () => showFeedback('error', isEn ? 'Could not read the image.' : 'تعذرت قراءة الصورة.');
-    reader.readAsDataURL(file);
+      showFeedback('success', isEn ? 'Image optimized. Save platform settings to apply it.' : 'تم تحسين الصورة وتجهيزها. احفظ إعدادات المنصة لتطبيقها.');
+    } catch (error) {
+      console.error('Image optimization failed:', error);
+      showFeedback('error', isEn ? 'Could not process this image.' : 'تعذّر تجهيز الصورة؛ جرّب صورة بصيغة JPG أو PNG.');
+    }
   };
 
   // Delete Evaluator Account
