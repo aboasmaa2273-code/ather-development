@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import heroFallback from '../assets/images/athar_hero_command_center.jfif';
 import { PlatformSettings, User } from '../types';
 import { AtharStorageService } from '../services/storageService';
 import { 
@@ -173,17 +174,9 @@ export const PublicHome: React.FC<PublicHomeProps> = ({
           <div className="lg:col-span-6">
             <div className="relative rounded-2xl overflow-hidden border-2 border-[#C6A66A] shadow-2xl bg-[#0F1D2B] group">
               <img
-                src={platformSettings.homeImageUrl || "assets/aistudio/Gemini_Generated_Image_dftlnrdftlnrdftl_bf07db32.jfif"}
+                src={platformSettings.homeImageUrl || heroFallback}
                 alt="منصة أثر - وحدة المشاهدة والتقييم الصفي المباشر - مدرسة الصدارة بنين"
-                referrerPolicy="no-referrer"
                 className="w-full h-[380px] sm:h-[430px] object-cover transition-transform duration-700 group-hover:scale-102"
-                onError={(e) => {
-                  // Fallback to src assets path if public root differs in dev
-                  const target = e.target as HTMLImageElement;
-                  if (!target.src.includes('athar_hero_command_center')) {
-                    target.src = '/src/assets/images/athar_hero_command_center.jfif';
-                  }
-                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#0A1622] via-transparent to-transparent opacity-85" />
               
