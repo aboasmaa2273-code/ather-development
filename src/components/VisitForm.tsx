@@ -74,19 +74,19 @@ export const VisitForm: React.FC<VisitFormProps> = ({
     editingVisit?.id || `VST-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`
   );
   const [academicYear, setAcademicYear] = useState(editingVisit?.academicYear || academicSettings.currentAcademicYear);
-  const [term, setTerm] = useState(editingVisit?.term || academicSettings.currentTerm);
+  const [term, setTerm] = useState(editingVisit?.term || '');
   const [visitType, setVisitType] = useState<'full' | 'quick'>(editingVisit?.visitType || 'full');
   
   // Teacher selection
-  const [selectedTeacherId, setSelectedTeacherId] = useState<string>(editingVisit?.teacherId || (teachers[0]?.id || ''));
-  const [teacherName, setTeacherName] = useState(editingVisit?.teacherName || (teachers[0]?.fullName || ''));
-  const [teacherJobNumber, setTeacherJobNumber] = useState(editingVisit?.teacherJobNumber || (teachers[0]?.jobNumber || ''));
-  const [teacherSpecialization, setTeacherSpecialization] = useState(editingVisit?.teacherSpecialization || (teachers[0]?.specialization || ''));
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>(editingVisit?.teacherId || '');
+  const [teacherName, setTeacherName] = useState(editingVisit?.teacherName || '');
+  const [teacherJobNumber, setTeacherJobNumber] = useState(editingVisit?.teacherJobNumber || '');
+  const [teacherSpecialization, setTeacherSpecialization] = useState(editingVisit?.teacherSpecialization || '');
 
   // Classroom & Session Details
-  const [grade, setGrade] = useState(editingVisit?.grade || academicSettings.grades[0] || (isEn ? 'Grade 7' : 'الصف السابع'));
-  const [section, setSection] = useState(editingVisit?.section || (isEn ? 'Section 1' : 'الشعبة 1'));
-  const [subject, setSubject] = useState(editingVisit?.subject || academicSettings.subjects[0] || (isEn ? 'Arabic' : 'اللغة العربية'));
+  const [grade, setGrade] = useState(editingVisit?.grade || '');
+  const [section, setSection] = useState(editingVisit?.section || '');
+  const [subject, setSubject] = useState(editingVisit?.subject || '');
   const [date, setDate] = useState(editingVisit?.date || new Date().toISOString().split('T')[0]);
   const [time, setTime] = useState(editingVisit?.time || '09:00');
   const [visitGoal, setVisitGoal] = useState(
@@ -103,15 +103,9 @@ export const VisitForm: React.FC<VisitFormProps> = ({
   const [status, setStatus] = useState<ClassroomVisit['status']>(editingVisit?.status || 'in_progress');
 
   // New Student Demographics & Attendance
-  const [totalStudents, setTotalStudents] = useState<number | ''>(
-    editingVisit?.totalStudents ?? 28
-  );
-  const [attendedStudents, setAttendedStudents] = useState<number | ''>(
-    editingVisit?.attendedStudents ?? 26
-  );
-  const [absentStudents, setAbsentStudents] = useState<number | ''>(
-    editingVisit?.absentStudents ?? 2
-  );
+  const [totalStudents, setTotalStudents] = useState<number | ''>(editingVisit?.totalStudents ?? '');
+  const [attendedStudents, setAttendedStudents] = useState<number | ''>(editingVisit?.attendedStudents ?? '');
+  const [absentStudents, setAbsentStudents] = useState<number | ''>(editingVisit?.absentStudents ?? '');
   const [studentGender, setStudentGender] = useState<StudentGender>(
     editingVisit?.studentGender || 'boys'
   );
@@ -384,18 +378,39 @@ export const VisitForm: React.FC<VisitFormProps> = ({
   const [lastSavedTime, setLastSavedTime] = useState<string>('');
   const autoSaveTimerRef = useRef<any>(null);
 
-  // Auto-fill teacher info when teacher selection changes
+  const resolveTeacherSubject = (specialization: string): string => {
+    const normalized = (specialization || '').trim().toLowerCase().replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/[\sـ_-]/g, '');
+    const aliases: Record<string, string[]> = {
+      'العلوم العامة': ['علوم', 'العلوم', 'science', 'generalscience'],
+      'الرياضيات': ['رياضيات', 'math', 'mathematics'],
+      'اللغة العربية': ['عربي', 'اللغةالعربية', 'arabic'],
+      'اللغة الإنجليزية': ['انجليزي', 'اللغةالانجليزية', 'english'],
+      'التربية الإسلامية': ['اسلامية', 'التربيةالاسلامية', 'islamic'],
+      'الدراسات الاجتماعية والتربية الأخلاقية': ['اجتماعيات', 'دراساتاجتماعية', 'socialstudies'],
+      'الحوسبة والتصميم الابتكاري': ['حوسبة', 'تصميمابتكاري', 'computing'],
+      'الفنون البصرية والموسيقية': ['فنون', 'فنونبصرية', 'arts'],
+      'التربية البدنية والصحية': ['رياضة', 'تربيةبدنية', 'physicaleducation']
+    };
+    const exact = academicSettings.subjects.find(s => s.toLowerCase().replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/[\sـ_-]/g, '') === normalized);
+    if (exact) return exact;
+    for (const [canonical, variants] of Object.entries(aliases)) {
+      if (variants.some(v => v.replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/[\sـ_-]/g, '') === normalized)) {
+        return academicSettings.subjects.find(s => s === canonical) || '';
+      }
+    }
+    return '';
+  };
+
+  // Populate all teacher details from the selected directory record; visit-specific class/attendance stay blank.
   const handleTeacherChange = (teacherId: string) => {
     setSelectedTeacherId(teacherId);
     const tch = teachers.find(t => t.id === teacherId);
-    if (tch) {
-      setTeacherName(tch.fullName);
-      setTeacherJobNumber(tch.jobNumber);
-      setTeacherSpecialization(tch.specialization);
-      if (academicSettings.subjects.includes(tch.specialization)) {
-        setSubject(tch.specialization);
-      }
-    }
+    setTeacherName(tch?.fullName || '');
+    setTeacherJobNumber(tch?.jobNumber || '');
+    setTeacherSpecialization(tch?.specialization || '');
+    setSubject(tch ? resolveTeacherSubject(tch.specialization || '') : '');
+    setGrade(''); setSection('');
+    setTotalStudents(''); setAttendedStudents(''); setAbsentStudents('');
   };
 
   // Group potential visit goals by category for the dropdown
@@ -750,6 +765,7 @@ export const VisitForm: React.FC<VisitFormProps> = ({
                 onChange={(e) => { handleTeacherChange(e.target.value); triggerAutoSave(); }}
                 className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg font-bold text-[#172C40] focus:outline-none focus:border-[#172C40]"
               >
+                <option value="">{isEn ? 'Choose a teacher' : 'اختر اسم المعلم'}</option>
                 {teachers.map(tch => (
                   <option key={tch.id} value={tch.id}>
                     {tch.fullName} ({tch.jobNumber})
@@ -788,6 +804,7 @@ export const VisitForm: React.FC<VisitFormProps> = ({
                 onChange={(e) => { setGrade(e.target.value); triggerAutoSave(); }}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none"
               >
+                <option value="">{isEn ? 'Choose grade' : 'اختر الصف'}</option>
                 {academicSettings.grades.map(g => (
                   <option key={g} value={g}>{g}</option>
                 ))}
@@ -801,6 +818,7 @@ export const VisitForm: React.FC<VisitFormProps> = ({
                 onChange={(e) => { setSection(e.target.value); triggerAutoSave(); }}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none"
               >
+                <option value="">{isEn ? 'Choose section' : 'اختر الشعبة'}</option>
                 {Array.from({ length: academicSettings.sectionsCount || 4 }).map((_, i) => (
                   <option key={i} value={isEn ? `Section ${i + 1}` : `الشعبة ${i + 1}`}>
                     {isEn ? `Section ${i + 1}` : `الشعبة ${i + 1}`}
@@ -813,10 +831,12 @@ export const VisitForm: React.FC<VisitFormProps> = ({
               <label className="block font-bold text-[#172C40] mb-1">{t.visits.subject} *</label>
               <select
                 value={subject}
+                disabled={!selectedTeacherId || !subject}
                 onChange={(e) => { setSubject(e.target.value); triggerAutoSave(); }}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none disabled:bg-slate-100 disabled:text-slate-500"
               >
-                {academicSettings.subjects.map(s => (
+                <option value="">{!selectedTeacherId ? (isEn ? 'Select teacher first' : 'اختر المعلم أولاً') : (isEn ? 'No matching subject in teacher record' : 'لا يوجد تخصص مطابق في بيانات المعلم')}</option>
+                {academicSettings.subjects.filter(s => s === subject).map(s => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
@@ -842,6 +862,7 @@ export const VisitForm: React.FC<VisitFormProps> = ({
                 onChange={(e) => { setTerm(e.target.value); triggerAutoSave(); }}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none"
               >
+                <option value="">{isEn ? 'Choose academic term' : 'اختر الفصل الدراسي'}</option>
                 {academicSettings.terms.map(tm => (
                   <option key={tm} value={tm}>{tm}</option>
                 ))}
