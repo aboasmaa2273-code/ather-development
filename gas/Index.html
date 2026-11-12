@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>أَثَر | منظومة التميز والتطوير التعليمي</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+  <?!= include('Styles'); ?>
+</head>
+<body class="bg-[#F2EBDD]/20 text-[#172C40] antialiased">
+  <div id="gas-app-container">
+    <!-- رأس التطبيق الرسمي -->
+    <header class="athar-header">
+      <div class="brand-zone">
+        <span class="brand-title">أَثَر</span>
+        <span class="brand-subtitle">منظومة التميز والتطوير التعليمي</span>
+      </div>
+      <div class="school-zone">
+        <span class="school-name">مدرسة الصدارة بنين - الحلقة الثانية</span>
+        <span class="school-slogan">«نَرْصُدُ الأَدَاءَ... وَنَصْنَعُ الأَثَرَ»</span>
+      </div>
+      <div class="user-zone">
+        <span id="user-display" class="user-badge">جاري التحقق...</span>
+      </div>
+    </header>
+
+    <!-- شريط الإجراءات والتبويبات -->
+    <nav class="athar-nav">
+      <button class="nav-btn active" onclick="switchGasTab('dashboard')">لوحة التحكم</button>
+      <button class="nav-btn" onclick="switchGasTab('teachers')">إدارة المعلمين</button>
+      <button class="nav-btn" onclick="switchGasTab('new-visit')">زيارة جديدة</button>
+      <button class="nav-btn" onclick="switchGasTab('visits')">سجل الزيارات</button>
+      <button class="nav-btn" onclick="switchGasTab('plans')">خطط التطوير</button>
+      <button class="nav-btn" onclick="switchGasTab('database-init')">تهيئة Google Sheets</button>
+    </nav>
+
+    <!-- المحتوى التفاعلي -->
+    <main id="main-content" class="athar-main">
+      <div id="loading-spinner" class="spinner-box">
+        <div class="spinner"></div>
+        <p>جاري تحميل البيانات من Google Sheets عبر google.script.run...</p>
+      </div>
+      <div id="tab-viewport"></div>
+    </main>
+  </div>
+
+  <?!= include('Client'); ?>
+</body>
+</html>

@@ -1,0 +1,28 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --brand-navy: #172C40;
+    --brand-gold: #C6A66A;
+    --brand-beige: #F2EBDD;
+    --brand-green: #668575;
+  }
+}
+
+@media print {
+  body {
+    background: white !important;
+    color: #172C40 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .print-break-inside-avoid {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
