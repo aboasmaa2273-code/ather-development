@@ -1,3 +1,4 @@
+import schoolLogo from '../assets/images/athar_school_emblem_1793852788755.jpg';
 import { 
   IndicatorDefinition, 
   Teacher, 
@@ -404,7 +405,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   slogan: '«نَرْصُدُ الأَدَاءَ... وَنَصْنَعُ الأَثَرَ»',
   schoolName: 'مدرسة الصدارة بنين - الحلقة الثانية',
   schoolStage: 'الحلقة الثانية (الصفوف 5 - 8)',
-  logoUrl: 'assets/athar-school-logo.jpg',
+  logoUrl: schoolLogo,
   welcomeMessage: 'مرحباً بكم في منصة «أَثَر»، البوابة الرقمية المتطورة للرصد النوعي للممارسات التدريسية الصفية، وتحفيز التطوير المهني المستدام لمعلمي المدرسة وفق أعلى معايير الجودة والتميز المؤسسي.',
   primaryColor: '#172C40',
   secondaryColor: '#C6A66A',
