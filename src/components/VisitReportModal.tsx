@@ -1,4 +1,5 @@
 import React from 'react';
+import schoolLogoFallback from '../assets/images/athar_school_emblem_1793852788755.jpg';
 import { ClassroomVisit, PlatformSettings } from '../types';
 import { AtharStorageService } from '../services/storageService';
 import { 
@@ -51,7 +52,10 @@ export const VisitReportModal: React.FC<VisitReportModalProps> = ({
   const t = translations[language];
   const isEn = language === 'en';
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    // Wait for the school emblem and any uploaded images before opening print.
+    const images = Array.from(document.querySelectorAll('.print-modal-body img')) as HTMLImageElement[];
+    await Promise.all(images.map((img) => img.decode().catch(() => undefined)));
     window.print();
   };
 
@@ -195,16 +199,11 @@ export const VisitReportModal: React.FC<VisitReportModalProps> = ({
 
             <div className="text-center">
               <div className="w-16 h-16 mx-auto rounded-full border border-[#C6A66A] p-1 bg-[#F2EBDD]/20 overflow-hidden flex items-center justify-center">
-                {platformSettings.logoUrl ? (
-                  <img 
-                    src={platformSettings.logoUrl} 
-                    alt="شعار المدرسة" 
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <Compass className="w-8 h-8 text-[#172C40]" />
-                )}
+                <img
+                  src={platformSettings.logoUrl || schoolLogoFallback}
+                  alt="شعار مدرسة الصدارة"
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div className="text-[10px] text-slate-400 mt-1 font-mono">{visit.id}</div>
             </div>
@@ -492,14 +491,20 @@ export const VisitReportModal: React.FC<VisitReportModalProps> = ({
             </div>
           )}
 
-          {/* Official evaluator signature and school approval */}
-          <div className="pt-8 border-t border-slate-300 grid grid-cols-1 sm:grid-cols-2 gap-8 text-center text-xs print:pt-12">
-            <div>
-              <span className="text-slate-500 block mb-6">{isEn ? 'Visitor / Evaluator Signature:' : 'توقيع الزائر/المقيّم:'}</span>
-              <div className="font-bold text-[#172C40] border-t border-slate-300 pt-1">{visit.evaluatorName}</div>
+          {/* Teacher acknowledgement, evaluator signature and school approval */}
+          <div className="pt-8 border-t border-slate-300 grid grid-cols-1 sm:grid-cols-3 gap-6 text-center text-xs print:pt-12 print:gap-4">
+            <div className="print-break-avoid">
+              <span className="text-slate-500 block mb-3 font-bold">{isEn ? 'Teacher Acknowledgement:' : 'اعتماد المعلم:'}</span>
+              <div className="font-bold text-[#172C40] mb-5">{visit.teacherName}</div>
+              <div className="min-h-7 border-t border-slate-300 pt-1 text-slate-500">{isEn ? 'Teacher signature' : 'توقيع المعلم'}</div>
             </div>
-            <div>
-              <span className="text-slate-500 block mb-6">{isEn ? 'School Approval:' : 'اعتماد إدارة مدرسة الصدارة'}</span>
+            <div className="print-break-avoid">
+              <span className="text-slate-500 block mb-3 font-bold">{isEn ? 'Visitor / Evaluator Signature:' : 'توقيع الزائر/المقيّم:'}</span>
+              <div className="font-bold text-[#172C40] mb-5">{visit.evaluatorName}</div>
+              <div className="min-h-7 border-t border-slate-300 pt-1 text-slate-500">{isEn ? 'Signature' : 'التوقيع'}</div>
+            </div>
+            <div className="print-break-avoid">
+              <span className="text-slate-500 block mb-3 font-bold">{isEn ? 'School Approval:' : 'اعتماد إدارة مدرسة الصدارة'}</span>
               <div className="min-h-7 border-t border-slate-300 pt-1" aria-label={isEn ? 'School approval area' : 'مساحة اعتماد إدارة المدرسة'}></div>
             </div>
           </div>
