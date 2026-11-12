@@ -1127,22 +1127,19 @@ export class AtharStorageService {
   }
 
   static getRatingLabel(rating: string, lang: 'ar' | 'en' = 'ar'): string {
-    if (lang === 'en') {
-      switch (rating) {
-        case 'yes': return 'Yes';
-        case 'needs_improvement': return 'Needs Improvement';
-        case 'no': return 'No';
-        case 'not_observed': return 'Not Observed';
-        default: return rating;
-      }
-    }
-    switch (rating) {
-      case 'yes': return 'نعم';
-      case 'needs_improvement': return 'يحتاج إلى تحسين';
-      case 'no': return 'لا';
-      case 'not_observed': return 'لم يُشاهد';
-      default: return rating;
-    }
+    const labels: Record<string, { ar: string; en: string }> = {
+      outstanding: { ar: 'ممتاز', en: 'Excellent' },
+      very_good: { ar: 'جيد جدًا', en: 'Very Good' },
+      good: { ar: 'جيد', en: 'Good' },
+      acceptable: { ar: 'مقبول', en: 'Acceptable' },
+      weak: { ar: 'ضعيف', en: 'Weak' },
+      not_observed: { ar: 'لم يُشاهد', en: 'Not Observed' },
+      // Legacy values are retained for previously saved visits.
+      yes: { ar: 'ممتاز', en: 'Excellent' },
+      needs_improvement: { ar: 'مقبول', en: 'Acceptable' },
+      no: { ar: 'ضعيف', en: 'Weak' }
+    };
+    return labels[rating]?.[lang] || rating;
   }
 
   static getDomainRatingLabel(rating: string, lang: 'ar' | 'en' = 'ar'): string {
