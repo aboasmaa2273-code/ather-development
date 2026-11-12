@@ -492,17 +492,11 @@ export const VisitReportModal: React.FC<VisitReportModalProps> = ({
             </div>
           )}
 
-          {/* Official evaluator signatures and school approval */}
-          <div className="pt-8 border-t border-slate-300 grid grid-cols-1 sm:grid-cols-3 gap-6 text-center text-xs print:pt-12">
+          {/* Official evaluator signature and school approval */}
+          <div className="pt-8 border-t border-slate-300 grid grid-cols-1 sm:grid-cols-2 gap-8 text-center text-xs print:pt-12">
             <div>
-              <span className="text-slate-500 block mb-6">{isEn ? 'Visitor / Evaluator Signature:' : 'توقيع الزائر / المقيّم:'}</span>
+              <span className="text-slate-500 block mb-6">{isEn ? 'Visitor / Evaluator Signature:' : 'توقيع الزائر/المقيّم:'}</span>
               <div className="font-bold text-[#172C40] border-t border-slate-300 pt-1">{visit.evaluatorName}</div>
-            </div>
-            <div>
-              <span className="text-slate-500 block mb-6">{isEn ? 'Visitor / Evaluator Signature:' : 'توقيع الزائر / المقيّم:'}</span>
-              <div className="font-bold text-[#172C40] border-t border-slate-300 pt-1">
-                {visit.visitors?.find(v => v.id !== visit.visitors?.[0]?.id)?.name || visit.evaluatorName}
-              </div>
             </div>
             <div>
               <span className="text-slate-500 block mb-6">{isEn ? 'School Approval:' : 'اعتماد إدارة مدرسة الصدارة'}</span>
