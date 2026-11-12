@@ -911,6 +911,12 @@ export const PRESET_RECOMMENDATION_BANKS: {
       category: 'strength',
       textAr: 'وضوح القواعد الصفية والتزام الطلبة الذاتي بالتعليمات وإدارة الحصة بسلاسة وهدوء.',
       textEn: 'Established classroom routines with self-regulated student behavior and calm management.'
+    },
+    {
+      id: 'str_other',
+      category: 'strength',
+      textAr: 'أخرى (يُحدِّدها المقيِّم وفق الملاحظة الصفية).',
+      textEn: 'Other (to be specified by the evaluator).'
     }
   ],
   improvementAreas: [
@@ -961,6 +967,12 @@ export const PRESET_RECOMMENDATION_BANKS: {
       category: 'growth',
       textAr: 'معالجة التفاوت الزمني في سرعة إنجاز الأنشطة عبر توفير مهام إثرائية مرنة للمجموعات السريعة.',
       textEn: 'Manage varied task completion speeds with prepared extension tasks for early finishers.'
+    },
+    {
+      id: 'gro_other',
+      category: 'growth',
+      textAr: 'أخرى (يُحدِّدها المقيِّم وفق الملاحظة الصفية).',
+      textEn: 'Other (to be specified by the evaluator).'
     }
   ],
   practicalRecommendations: [
@@ -1005,6 +1017,12 @@ export const PRESET_RECOMMENDATION_BANKS: {
       category: 'recommendation',
       textAr: 'تنظيم ورشة عمل مصغرة بالقسم لتبادل ممارسات التقويم التكويني الذكي والمنصات التعليمية.',
       textEn: 'Coordinate a brief departmental knowledge-sharing circle on digital formative assessment.'
+    },
+    {
+      id: 'rec_other',
+      category: 'recommendation',
+      textAr: 'أخرى (يُحدِّدها المقيِّم وفق الملاحظة الصفية).',
+      textEn: 'Other (to be specified by the evaluator).'
     }
   ],
   followUpPlans: [
@@ -1049,6 +1067,12 @@ export const PRESET_RECOMMENDATION_BANKS: {
       category: 'followup',
       textAr: 'متابعة أسبوعية إلكترونية من خلال منصة التعلم الذكي وسجل الأداء التدريسي للمعلم.',
       textEn: 'Weekly digital follow-up through the institutional learning platform and teacher log.'
+    },
+    {
+      id: 'fup_other',
+      category: 'followup',
+      textAr: 'أخرى (يُحدِّدها المقيِّم وفق الملاحظة الصفية).',
+      textEn: 'Other (to be specified by the evaluator).'
     }
   ]
 };
