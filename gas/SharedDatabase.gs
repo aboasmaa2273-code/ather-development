@@ -38,14 +38,20 @@ function createInitialCentralAdmin() {
   const username = String(props.getProperty('ATHAR_BOOTSTRAP_USER') || '').trim().toLowerCase();
   const password = String(props.getProperty('ATHAR_BOOTSTRAP_PASSWORD') || '');
   if (username.length < 4 || password.length < 12) throw new Error('أدخل اسم مستخدم من 4 أحرف وكلمة مرور قوية من 12 حرفاً على الأقل في Script Properties.');
-  setupCentralDatabase();
-  const sh = SpreadsheetApp.getActive().getSheetByName(ATHAR_DB.users);
-  const rows = sh.getDataRange().getValues();
-  if (rows.length > 1) throw new Error('يوجد مستخدمون بالفعل؛ لن يتم إنشاء مسؤول أول أو استبدال بيانات الدخول.');
-  const salt = Utilities.getUuid() + Utilities.getUuid();
-  sh.appendRow([Utilities.getUuid(),username,atharHash_(password,salt),'pbkdf2:'+salt,'مسؤول منصة أَثَر','platform_admin','sch_alsadara_01','','active',new Date().toISOString(),new Date().toISOString()]);
-  props.deleteProperty('ATHAR_BOOTSTRAP_PASSWORD');
-  return {success:true,message:'تم إنشاء حساب المسؤول المركزي. احتفظ ببيانات الدخول في مكان آمن.'};
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    setupCentralDatabase();
+    const sh = SpreadsheetApp.getActive().getSheetByName(ATHAR_DB.users);
+    const rows = sh.getDataRange().getValues();
+    if (rows.length > 1) throw new Error('يوجد مستخدمون بالفعل؛ لن يتم إنشاء مسؤول أول أو استبدال بيانات الدخول.');
+    const salt = Utilities.getUuid() + Utilities.getUuid();
+    sh.appendRow([Utilities.getUuid(),username,atharHash_(password,salt),'pbkdf2:'+salt,'مسؤول منصة أَثَر','platform_admin','sch_alsadara_01','','active',new Date().toISOString(),new Date().toISOString()]);
+    props.deleteProperty('ATHAR_BOOTSTRAP_PASSWORD');
+    return {success:true,message:'تم إنشاء حساب المسؤول المركزي. احتفظ ببيانات الدخول في مكان آمن.'};
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // PBKDF2-HMAC-SHA256. The iteration count is deliberately bounded for Apps Script runtime.
