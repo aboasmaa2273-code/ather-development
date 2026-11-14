@@ -361,7 +361,7 @@ export const GasIntegrationHub: React.FC<GasIntegrationHubProps> = ({ language =
             <span className="w-6 h-6 rounded-full bg-[#C6A66A] text-[#172C40] flex items-center justify-center font-bold text-xs">4</span>
             <strong className="block text-[#172C40]">{isAr ? 'النشر كتطبيق ويب' : 'Deploy as Web App'}</strong>
             <p className="text-slate-700 text-[11px] leading-relaxed">
-              {isAr ? 'اضغط على «نشر (Deploy)» ← «تطبيق ويب (Web app)»، واختر صلاحية الوصول المناسبة لمدرستك واحصل على الرابط المباشر.' : 'Click Deploy &gt; New deployment &gt; Web app. Choose access level and get your live production URL.'}
+              {isAr ? 'اضغط «نشر ← عملية نشر جديدة ← تطبيق ويب». اختر «التنفيذ بصفتي: أنا»، و«إمكانية الوصول: أي شخص» إذا كانت سياسة حساب المدرسة تسمح بذلك. انسخ رابط /exec، ثم الصقه في حقل الاتصال بالمنصة واحفظه واختبر الاتصال.' : 'Choose Deploy &gt; New deployment &gt; Web app. Set Execute as: Me and Who has access: Anyone, if allowed by your school account policy. Copy the /exec URL, paste it into the platform connection field, save, and test.'}
             </p>
           </div>
         </div>
