@@ -91,7 +91,17 @@ export class CentralDatabaseClient {
         resolve(result);
       };
       const onMessage = (event: MessageEvent) => {
-        if (event.source !== iframe.contentWindow) return;
+        // Accept responses only from the exact iframe created for this request and
+        // from Google's Apps Script response hosts; source + requestId prevent
+        // unrelated windows from resolving an in-flight database operation.
+        let trustedGoogleOrigin = false;
+        try {
+          const host = new URL(event.origin).hostname;
+          trustedGoogleOrigin = host === 'script.google.com' ||
+            host === 'script.googleusercontent.com' ||
+            host.endsWith('.googleusercontent.com');
+        } catch { /* reject opaque or malformed origins */ }
+        if (!trustedGoogleOrigin || event.source !== iframe.contentWindow) return;
         const data = event.data;
         if (!data || data.type !== RESPONSE_TYPE || data.requestId !== requestId) return;
         finish(data.payload as CentralApiResponse<T>);
