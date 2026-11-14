@@ -123,48 +123,11 @@ function atharDelete_(user, entity, id, clientId) {
   throw new Error('السجل المطلوب غير موجود.');
 }
 
-/** JSONP للقراءة فقط؛ لا تُرسل بيانات حساسة في معاملات GET. */
 function doGet(e) {
-  if (e && e.parameter && e.parameter.api==='1') {
-    let result;
-    try { result=atharApiRead_(e.parameter); } catch(err) { result={success:false,error:String(err.message||err)}; }
-    const cb=String(e.parameter.callback||'').replace(/[^A-Za-z0-9_.$]/g,'');
-    if (!cb) return atharJson_(result);
-    return ContentService.createTextOutput(cb+'('+JSON.stringify(result)+');').setMimeType(ContentService.MimeType.JAVASCRIPT);
-  }
   const t=HtmlService.createTemplateFromFile('Index');
   t.platformTitle='أَثَر | منظومة التميز والتطوير التعليمي';
   t.schoolName='مدرسة الصدارة بنين - الحلقة الثانية';
   return t.evaluate().setTitle(t.platformTitle).addMetaTag('viewport','width=device-width, initial-scale=1.0').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-}
-function atharApiRead_(p) {
-  const user=atharRequire_(p.token);
-  if(p.action==='health') return {success:true,version:'1.0',user:user.name};
-  if(p.action==='list') {
-    const entity=String(p.entity||'');
-    if(!['teachers','visits','plans','settings','visitors'].includes(entity)) throw new Error('نوع السجل غير مدعوم.');
-    if(entity==='visits' && user.role==='evaluator') {
-      const rows=atharRows_(entity,user.schoolId,false);
-      return {success:true,records:rows.filter(x=>String(x.payload.evaluatorId)===user.userId)};
-    }
-    if(user.role==='teacher' && entity==='visits') {
-      const rows=atharRows_(entity,user.schoolId,false);
-      return {success:true,records:rows.filter(x=>String(x.payload.teacherJobNumber)===String(user.jobNumber))};
-    }
-    if(user.role==='teacher' && entity==='plans') {
-      const rows=atharRows_(entity,user.schoolId,false);
-      return {success:true,records:rows.filter(x=>String(x.payload.teacherJobNumber)===String(user.jobNumber))};
-    }
-    if(!['platform_admin','school_admin','vice_principal'].includes(user.role) && ['teachers','settings','visitors'].includes(entity)) throw new Error('ليست لديك صلاحية عرض هذا السجل.');
-    return {success:true,records:atharRows_(entity,user.schoolId,false)};
-  }
-  if(p.action==='audit') {
-    if(!['platform_admin','school_admin','vice_principal'].includes(user.role)) throw new Error('سجل التدقيق متاح للإدارة المخولة فقط.');
-    const sh=SpreadsheetApp.getActive().getSheetByName(ATHAR_DB.audit);
-    const rows=sh.getDataRange().getValues();
-    return {success:true,records:rows.length>1?rows.slice(1).filter(r=>String(r[1])===user.schoolId).reverse().slice(0,5000):[]};
-  }
-  throw new Error('طلب قراءة غير معروف.');
 }
 
 /** POST من النموذج المخفي؛ يعيد رسالة إلى النافذة الأم بعد إتمام العملية. */
@@ -175,7 +138,7 @@ function doPost(e) {
     result=atharApiWrite_(body);
   } catch(err) { result={success:false,error:String(err.message||err)}; }
   const safe=JSON.stringify(result).replace(/</g,'\\u003c');
-  return HtmlService.createHtmlOutput('<!doctype html><meta charset="utf-8"><script>parent.postMessage({type:"ATHAR_DB_RESULT",payload:'+safe+'},"*");</script>');
+  return HtmlService.createHtmlOutput('<!doctype html><meta charset="utf-8"><script>parent.postMessage({type:"ATHAR_DB_RESULT",payload:'+safe+'},"https://aboasmaa2273-code.github.io");</script>');
 }
 function atharApiWrite_(b) {
   if(b.action==='login') {
@@ -188,6 +151,19 @@ function atharApiWrite_(b) {
     return {success:true,token,user:session,expiresIn:ATHAR_DB.cacheSeconds};
   }
   const user=atharRequire_(b.token);
+  if(b.action==='adminCreateUser') {
+    const admin=atharRequire_(b.token,['platform_admin','school_admin']);
+    const username=String(b.username||'').trim().toLowerCase();
+    const password=String(b.password||'');
+    const name=String(b.name||'').trim();
+    const role=String(b.role||'evaluator');
+    if(username.length<4 || password.length<12 || !name || ATHAR_DB.roles.indexOf(role)<0) throw new Error('تحقق من الاسم واسم المستخدم وكلمة المرور والصلاحية.');
+    if(atharFindUser_(username)) throw new Error('اسم المستخدم مستخدم بالفعل.');
+    const salt=Utilities.getUuid()+Utilities.getUuid();
+    SpreadsheetApp.getActive().getSheetByName(ATHAR_DB.users).appendRow([Utilities.getUuid(),username,atharHash_(password,salt),'sha256:'+salt,name,role,admin.schoolId,String(b.jobNumber||''),'active',new Date().toISOString(),new Date().toISOString()]);
+    atharAudit_(admin,'إنشاء حساب', 'user',username,'إنشاء حساب جديد بصلاحية '+role,b.clientId);
+    return {success:true};
+  }
   if(b.action==='upsert') {
     const lock=LockService.getScriptLock(); lock.waitLock(20000);
     try { return {success:true,record:atharUpsert_(user,String(b.entity),b.record||{},b.clientId)}; }
