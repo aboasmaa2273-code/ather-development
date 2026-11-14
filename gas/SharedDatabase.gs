@@ -171,7 +171,8 @@ function atharRequire_(token, roles) {
   const account = atharFindUserById_(user.userId);
   if (!account || String(account.status) !== 'active' ||
       String(account.role) !== String(user.role) ||
-      String(account.schoolId) !== String(user.schoolId)) {
+      String(account.schoolId) !== String(user.schoolId) ||
+      String(account.jobNumber || '') !== String(user.jobNumber || '')) {
     CacheService.getScriptCache().remove('athar_session_'+token);
     throw new Error('تم إيقاف الحساب أو تغيير صلاحياته. يرجى التواصل مع إدارة المنظومة.');
   }
