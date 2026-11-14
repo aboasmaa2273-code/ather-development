@@ -64,6 +64,30 @@ function atharFindUser_(username) {
   }
   return null;
 }
+// حدّ محاولات تسجيل الدخول: خمس محاولات فاشلة لكل اسم مستخدم خلال 15 دقيقة.
+function atharLoginRateKey_(username) {
+  const digest=Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,String(username||'').trim().toLowerCase(),Utilities.Charset.UTF_8);
+  return 'athar_login_fail_'+Utilities.base64EncodeWebSafe(digest).replace(/=+$/,'');
+}
+function atharIsLoginBlocked_(username) {
+  const raw=CacheService.getScriptCache().get(atharLoginRateKey_(username));
+  return Number(raw||0)>=5;
+}
+function atharRecordFailedLogin_(username) {
+  const lock=LockService.getScriptLock();
+  lock.waitLock(5000);
+  try {
+    const cache=CacheService.getScriptCache();
+    const key=atharLoginRateKey_(username);
+    const count=Number(cache.get(key)||0)+1;
+    cache.put(key,String(count),900);
+    return count;
+  } finally { lock.releaseLock(); }
+}
+function atharClearLoginFailures_(username) {
+  CacheService.getScriptCache().remove(atharLoginRateKey_(username));
+}
+
 function atharSession_(token) {
   if (!token) return null;
   const raw=CacheService.getScriptCache().get('athar_session_'+token);
@@ -145,8 +169,15 @@ function doPost(e) {
 function atharApiWrite_(b) {
   if(b.action==='ping') return {success:true,service:'ATHAR_CENTRAL_DB',version:1,serverTime:new Date().toISOString()};
   if(b.action==='login') {
-    const u=atharFindUser_(String(b.username||'').trim().toLowerCase());
-    if(!u || String(u.status)!=='active' || atharHash_(String(b.password||''),String(u.salt).replace(/^sha256:/,''))!==String(u.passwordHash)) throw new Error('اسم المستخدم أو كلمة المرور غير صحيحة.');
+    const username=String(b.username||'').trim().toLowerCase();
+    if (atharIsLoginBlocked_(username)) throw new Error('تعذر تسجيل الدخول مؤقتًا بسبب تكرار المحاولات. حاول بعد 15 دقيقة.');
+    const u=atharFindUser_(username);
+    if(!u || String(u.status)!=='active' || atharHash_(String(b.password||''),String(u.salt).replace(/^sha256:/,''))!==String(u.passwordHash)) {
+      const failures=atharRecordFailedLogin_(username);
+      if (failures>=5) throw new Error('تعذر تسجيل الدخول مؤقتًا بسبب تكرار المحاولات. حاول بعد 15 دقيقة.');
+      throw new Error('اسم المستخدم أو كلمة المرور غير صحيحة.');
+    }
+    atharClearLoginFailures_(username);
     const token=Utilities.getUuid()+Utilities.getUuid();
     const session={userId:String(u.userId),name:String(u.name),role:String(u.role),schoolId:String(u.schoolId),jobNumber:String(u.jobNumber||'')};
     CacheService.getScriptCache().put('athar_session_'+token,JSON.stringify(session),ATHAR_DB.cacheSeconds);
