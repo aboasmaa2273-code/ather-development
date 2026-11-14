@@ -338,6 +338,9 @@ function atharApiWrite_(b) {
       if (failures>=5) throw new Error('تعذر تسجيل الدخول مؤقتًا بسبب تكرار المحاولات. حاول بعد 15 دقيقة.');
       throw new Error('اسم المستخدم أو كلمة المرور غير صحيحة.');
     }
+    if (String(u.role)==='teacher' && !atharTeacherRegistryHasJobNumber_(u.jobNumber,u.schoolId)) {
+      throw new Error('حساب المعلم غير مرتبط بسجل معلم فعال وفريد؛ يرجى مراجعة إدارة المنظومة.');
+    }
     // Upgrade legacy SHA-256 hashes after successful authentication.
     if (String(u.passwordHash).indexOf('pbkdf2-sha256:') !== 0) {
       const upgradedSalt = Utilities.getUuid() + Utilities.getUuid();
