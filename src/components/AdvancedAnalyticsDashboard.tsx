@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ClassroomVisit, Teacher, ImprovementPlan, AuditLogEntry, User } from '../types';
-import { OFFICIAL_INDICATORS } from '../data/defaultData';
+import { DEFAULT_ACADEMIC_SETTINGS, OFFICIAL_INDICATORS } from '../data/defaultData';
 import { AtharStorageService } from '../services/storageService';
 import { FileText, Users, ClipboardList, GraduationCap, ListChecks, ChartNoAxesCombined, Archive, History, Download, Search, CalendarDays, Filter, Eye, Printer, ShieldCheck, RotateCcw, Trash2, X, CheckSquare } from 'lucide-react';
 
@@ -84,11 +84,42 @@ export const AdvancedAnalyticsDashboard: React.FC<Props> = ({ currentUser, visit
     ...AtharStorageService.getRegisteredVisitors().filter(v => v.role !== 'teacher').map(v => v.name),
     ...AtharStorageService.getAllUsers().filter(u => ['evaluator', 'school_admin', 'platform_admin', 'vice_principal'].includes(u.role)).map(u => u.name)
   ].filter((name): name is string => Boolean(name && String(name).trim())))).sort((a, b) => a.localeCompare(b, 'ar'));
-  const subjects = Array.from(new Set(scopedVisits.map(v => v.subject).filter(Boolean))).sort();
-  const grades = Array.from(new Set(scopedVisits.map(v => v.grade).filter(Boolean))).sort();
-  const terms = Array.from(new Set(scopedVisits.map(v => v.term).filter(Boolean))).sort();
-  const academicYears = Array.from(new Set(scopedVisits.map(v => v.academicYear).filter(Boolean))).sort();
-  const activeTeachers = Array.from(new Map(scopedVisits.map(v => [v.teacherId || v.teacherJobNumber, { id: v.teacherId || v.teacherJobNumber, name: v.teacherName, job: v.teacherJobNumber }])).values());
+  // Build dashboard filters from the official school directory/settings, not only from visits already recorded.
+  // This keeps all choices visible even before the first visit is saved in a grade/subject/term.
+  const savedAcademicSettings = AtharStorageService.getAcademicSettings();
+  const academicSettings = {
+    ...DEFAULT_ACADEMIC_SETTINGS,
+    ...savedAcademicSettings,
+    grades: savedAcademicSettings.grades?.length ? savedAcademicSettings.grades : DEFAULT_ACADEMIC_SETTINGS.grades,
+    subjects: savedAcademicSettings.subjects?.length ? savedAcademicSettings.subjects : DEFAULT_ACADEMIC_SETTINGS.subjects,
+    terms: savedAcademicSettings.terms?.length ? savedAcademicSettings.terms : DEFAULT_ACADEMIC_SETTINGS.terms
+  };
+  const subjects = Array.from(new Set([
+    ...academicSettings.subjects,
+    ...scopedVisits.map(v => v.subject)
+  ].filter((value): value is string => Boolean(value && String(value).trim())))).sort((a, b) => a.localeCompare(b, 'ar'));
+  const grades = Array.from(new Set([
+    ...academicSettings.grades,
+    ...scopedVisits.map(v => v.grade)
+  ].filter((value): value is string => Boolean(value && String(value).trim())))).sort((a, b) => a.localeCompare(b, 'ar'));
+  const terms = Array.from(new Set([
+    ...academicSettings.terms,
+    ...scopedVisits.map(v => v.term)
+  ].filter((value): value is string => Boolean(value && String(value).trim())))).sort((a, b) => a.localeCompare(b, 'ar'));
+  const currentStartYear = Number((academicSettings.currentAcademicYear || '2026').match(/20\\d{2}/)?.[0]) || new Date().getFullYear();
+  const futureAcademicYears = Array.from({ length: 10 }, (_, index) => {
+    const startYear = currentStartYear + index;
+    return `${startYear} - ${startYear + 1}`;
+  });
+  const academicYears = Array.from(new Set([
+    ...futureAcademicYears,
+    ...(academicSettings.academicYears || []),
+    ...scopedVisits.map(v => v.academicYear)
+  ].filter((value): value is string => Boolean(value && String(value).trim())))).sort((a, b) => a.localeCompare(b, 'en'));
+  const activeTeachers = Array.from(new Map([
+    ...teachers.filter(t => t.status === 'active').map(t => [t.id, { id: t.id, name: t.fullName, job: t.jobNumber }] as const),
+    ...scopedVisits.map(v => [v.teacherId || v.teacherJobNumber, { id: v.teacherId || v.teacherJobNumber, name: v.teacherName, job: v.teacherJobNumber }] as const)
+  ].filter(([id, teacher]) => Boolean(id && teacher.name))).values());
   const full = filtered.filter(v => v.visitType === 'full').length;
   const quick = filtered.filter(v => v.visitType === 'quick').length;
   const completed = filtered.filter(v => ['completed', 'approved'].includes(v.status)).length;
