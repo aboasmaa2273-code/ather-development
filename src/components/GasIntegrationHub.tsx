@@ -158,9 +158,9 @@ export const GasIntegrationHub: React.FC<GasIntegrationHubProps> = ({ language =
           </h2>
           <p className="text-slate-500 mt-1">
             {isAr ? (
-              <>جميع الأكواد المجهزة المتوافقة 100% مع Google Apps Script Web App، دوال <code className="font-mono bg-slate-100 px-1 py-0.5 rounded">doGet()</code>، <code className="font-mono bg-slate-100 px-1 py-0.5 rounded">initializeDatabase()</code>، و <code className="font-mono bg-slate-100 px-1 py-0.5 rounded">google.script.run</code>.</>
+              <>ملف الخادم المركزي الفعلي <code className="font-mono bg-slate-100 px-1 py-0.5 rounded">SharedDatabase.gs</code> وملف إعدادات النشر. انسخ الملفين إلى مشروع Apps Script المرتبط بجدول بيانات أَثَر.</>
             ) : (
-              <>Complete source code ready for Google Apps Script Web App: <code className="font-mono bg-slate-100 px-1 py-0.5 rounded">doGet()</code>, <code className="font-mono bg-slate-100 px-1 py-0.5 rounded">initializeDatabase()</code>, and <code className="font-mono bg-slate-100 px-1 py-0.5 rounded">google.script.run</code>.</>
+              <>The actual central backend file <code className="font-mono bg-slate-100 px-1 py-0.5 rounded">SharedDatabase.gs</code> and deployment manifest. Copy both files into an Apps Script project bound to the Athar spreadsheet.</>
             )}
           </p>
         </div>
