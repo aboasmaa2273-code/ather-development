@@ -98,8 +98,7 @@ export class CentralDatabaseClient {
         try {
           const host = new URL(event.origin).hostname;
           trustedGoogleOrigin = host === 'script.google.com' ||
-            host === 'script.googleusercontent.com' ||
-            host.endsWith('.googleusercontent.com');
+            host === 'script.googleusercontent.com';
         } catch { /* reject opaque or malformed origins */ }
         if (!trustedGoogleOrigin || event.source !== iframe.contentWindow) return;
         const data = event.data;
