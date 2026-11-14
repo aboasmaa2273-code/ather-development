@@ -104,6 +104,14 @@ function atharUpsert_(user, entity, record, clientId) {
   const rows=sh.getDataRange().getValues(), h=rows[0], ix=Object.fromEntries(h.map((x,i)=>[String(x),i]));
   let row=-1;
   for(let i=1;i<rows.length;i++) if(String(rows[i][ix.recordId])===id && String(rows[i][ix.entity])===entity && String(rows[i][ix.schoolId])===user.schoolId){row=i+1;break;}
+  // المقيم لا ينشئ ولا يعدّل إلا الزيارات المنسوبة إلى حسابه؛ لا نعتمد على بيانات الواجهة وحدها.
+  if (user.role==='evaluator' && entity==='visits') {
+    if (String(record.evaluatorId||'') !== String(user.userId)) throw new Error('لا يمكنك حفظ زيارة باسم مقيم آخر.');
+    if (row>0) {
+      const existing=JSON.parse(String(rows[row-1][ix.payload]||'{}'));
+      if (String(existing.evaluatorId||'') !== String(user.userId)) throw new Error('لا يمكنك تعديل زيارة لا تخص حسابك.');
+    }
+  }
   const now=new Date().toISOString();
   const oldCreated=row>0?rows[row-1][ix.createdAt]:now;
   const data=[id,entity,user.schoolId,JSON.stringify(record),oldCreated,now,user.userId,''];
