@@ -150,6 +150,14 @@ function atharTeacherJobNumberInUse_(jobNumber, schoolId, excludeUserId) {
   );
 }
 
+function atharTeacherRegistryHasJobNumber_(jobNumber, schoolId) {
+  const wanted = String(jobNumber || '').trim();
+  if (!wanted) return false;
+  return atharRows_('teachers', schoolId, false).some(row =>
+    String(row.payload && row.payload.jobNumber || '').trim() === wanted
+  );
+}
+
 function atharAdminTarget_(admin, userId) {
   const target = atharFindUserById_(userId);
   if (!target || String(target.status)==='deleted') throw new Error('الحساب المطلوب غير موجود.');
@@ -372,6 +380,7 @@ function atharApiWrite_(b) {
     const allowedRoles=admin.role==='platform_admin'?ATHAR_DB.roles:['vice_principal','evaluator','teacher'];
     if(username.length<4 || !name || allowedRoles.indexOf(role)<0) throw new Error('تحقق من الاسم واسم المستخدم والصلاحية.');
     if (role==='teacher' && !jobNumber) throw new Error('يجب ربط حساب المعلم برقمه الوظيفي.');
+    if (role==='teacher' && !atharTeacherRegistryHasJobNumber_(jobNumber,target.schoolId)) throw new Error('الرقم الوظيفي غير موجود في سجل المعلمين بالمدرسة؛ أضف المعلم أو استورد بياناته أولاً.');
     if (role==='teacher' && atharTeacherJobNumberInUse_(jobNumber,target.schoolId,target.userId)) throw new Error('الرقم الوظيفي مرتبط بحساب معلم آخر في المدرسة.');
     const duplicate=atharFindUser_(username);
     if(duplicate && String(duplicate.userId)!==String(target.userId)) throw new Error('اسم المستخدم مستخدم بالفعل.');
@@ -422,6 +431,7 @@ function atharApiWrite_(b) {
     const allowedRoles = admin.role==='platform_admin' ? ATHAR_DB.roles : ['vice_principal','evaluator','teacher'];
     if(username.length<4 || password.length<12 || !name || allowedRoles.indexOf(role)<0) throw new Error('تحقق من الاسم واسم المستخدم وكلمة المرور والصلاحية. لا يحق لمسؤول المدرسة إنشاء حساب مسؤول منصة أو مسؤول مدرسة.');
     if (role==='teacher' && !jobNumber) throw new Error('يجب ربط حساب المعلم برقمه الوظيفي.');
+    if (role==='teacher' && !atharTeacherRegistryHasJobNumber_(jobNumber,admin.schoolId)) throw new Error('الرقم الوظيفي غير موجود في سجل المعلمين بالمدرسة؛ أضف المعلم أو استورد بياناته أولاً.');
     if (role==='teacher' && atharTeacherJobNumberInUse_(jobNumber,admin.schoolId,'')) throw new Error('الرقم الوظيفي مرتبط بحساب معلم آخر في المدرسة.');
     if(atharFindUser_(username)) throw new Error('اسم المستخدم مستخدم بالفعل.');
     const salt=Utilities.getUuid()+Utilities.getUuid();
