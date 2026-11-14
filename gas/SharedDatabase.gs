@@ -131,9 +131,11 @@ function doPost(e) {
     result=atharApiWrite_(body);
   } catch(err) { result={success:false,error:String(err.message||err)}; }
   const safe=JSON.stringify(result).replace(/</g,'\\u003c');
-  return HtmlService.createHtmlOutput('<!doctype html><meta charset="utf-8"><script>parent.postMessage({type:"ATHAR_DB_RESULT",payload:'+safe+'},"https://aboasmaa2273-code.github.io");</script>');
+  const requestId=JSON.stringify(String((e.parameter && e.parameter.requestId)||''));
+  return HtmlService.createHtmlOutput('<!doctype html><meta charset="utf-8"><script>parent.postMessage({type:"ATHAR_DB_RESULT",requestId:'+requestId+',payload:'+safe+'},"https://aboasmaa2273-code.github.io");</script>');
 }
 function atharApiWrite_(b) {
+  if(b.action==='ping') return {success:true,service:'ATHAR_CENTRAL_DB',version:1,serverTime:new Date().toISOString()};
   if(b.action==='login') {
     const u=atharFindUser_(String(b.username||'').trim().toLowerCase());
     if(!u || String(u.status)!=='active' || atharHash_(String(b.password||''),String(u.salt).replace(/^sha256:/,''))!==String(u.passwordHash)) throw new Error('اسم المستخدم أو كلمة المرور غير صحيحة.');
