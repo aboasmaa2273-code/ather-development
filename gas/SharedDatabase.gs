@@ -48,9 +48,35 @@ function createInitialCentralAdmin() {
   return {success:true,message:'تم إنشاء حساب المسؤول المركزي. احتفظ ببيانات الدخول في مكان آمن.'};
 }
 
+// PBKDF2-HMAC-SHA256. The iteration count is deliberately bounded for Apps Script runtime.
+const ATHAR_PASSWORD_ITERATIONS = 12000;
 function atharHash_(password, salt) {
-  const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, salt + String(password), Utilities.Charset.UTF_8);
-  return Utilities.base64Encode(bytes);
+  const iterations = ATHAR_PASSWORD_ITERATIONS;
+  const key = atharPbkdf2_(String(password), String(salt), iterations);
+  return 'pbkdf2-sha256:' + iterations + ':' + Utilities.base64Encode(key);
+}
+function atharPbkdf2_(password, salt, iterations) {
+  const block = salt + String.fromCharCode(0,0,0,1);
+  let u = Utilities.computeHmacSha256Signature(block, password, Utilities.Charset.UTF_8);
+  const result = u.slice();
+  for (let i = 1; i < iterations; i++) {
+    u = Utilities.computeHmacSha256Signature(u, password);
+    for (let j = 0; j < result.length; j++) result[j] = result[j] ^ u[j];
+  }
+  return result;
+}
+function atharVerifyPassword_(password, storedHash, storedSalt) {
+  const encoded = String(storedHash || '');
+  if (encoded.indexOf('pbkdf2-sha256:') === 0) {
+    const parts = encoded.split(':');
+    const iterations = Number(parts[1]);
+    if (!Number.isInteger(iterations) || iterations < 10000 || iterations > 20000) return false;
+    const candidate = Utilities.base64Encode(atharPbkdf2_(String(password), String(storedSalt), iterations));
+    return candidate === parts[2];
+  }
+  // Temporary backward compatibility: successful legacy logins are upgraded immediately.
+  const legacy = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(storedSalt) + String(password), Utilities.Charset.UTF_8);
+  return Utilities.base64Encode(legacy) === encoded;
 }
 function atharJson_(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
 function atharFindUser_(username) {
@@ -145,6 +171,7 @@ function atharUpsert_(user, entity, record, clientId) {
 }
 function atharDelete_(user, entity, id, clientId) {
   if (!['platform_admin','school_admin'].includes(user.role)) throw new Error('الحذف مقتصر على الإدارة المخولة.');
+  if (!['teachers','settings','visitors'].includes(entity)) throw new Error('لا يُسمح بالحذف المباشر للزيارات أو الخطط أو السجلات التقييمية؛ استخدم إجراءات الأرشفة المعتمدة.');
   const sh=SpreadsheetApp.getActive().getSheetByName(ATHAR_DB.records);
   const rows=sh.getDataRange().getValues(), h=rows[0], ix=Object.fromEntries(h.map((x,i)=>[String(x),i]));
   for(let i=1;i<rows.length;i++) if(String(rows[i][ix.recordId])===String(id)&&String(rows[i][ix.entity])===entity&&String(rows[i][ix.schoolId])===user.schoolId) {
@@ -172,10 +199,19 @@ function atharApiWrite_(b) {
     const username=String(b.username||'').trim().toLowerCase();
     if (atharIsLoginBlocked_(username)) throw new Error('تعذر تسجيل الدخول مؤقتًا بسبب تكرار المحاولات. حاول بعد 15 دقيقة.');
     const u=atharFindUser_(username);
-    if(!u || String(u.status)!=='active' || atharHash_(String(b.password||''),String(u.salt).replace(/^sha256:/,''))!==String(u.passwordHash)) {
+    if(!u || String(u.status)!=='active' || !atharVerifyPassword_(String(b.password||''),String(u.passwordHash),String(u.salt).replace(/^(sha256:|pbkdf2:)/,''))) {
       const failures=atharRecordFailedLogin_(username);
       if (failures>=5) throw new Error('تعذر تسجيل الدخول مؤقتًا بسبب تكرار المحاولات. حاول بعد 15 دقيقة.');
       throw new Error('اسم المستخدم أو كلمة المرور غير صحيحة.');
+    }
+    // Upgrade legacy SHA-256 hashes after successful authentication.
+    if (String(u.passwordHash).indexOf('pbkdf2-sha256:') !== 0) {
+      const upgradedSalt = Utilities.getUuid() + Utilities.getUuid();
+      const usersSheet = SpreadsheetApp.getActive().getSheetByName(ATHAR_DB.users);
+      const headers = usersSheet.getRange(1,1,1,usersSheet.getLastColumn()).getValues()[0];
+      const headerIndex = Object.fromEntries(headers.map((h,i)=>[String(h),i+1]));
+      usersSheet.getRange(u._row,headerIndex.salt).setValue(upgradedSalt);
+      usersSheet.getRange(u._row,headerIndex.passwordHash).setValue(atharHash_(String(b.password||''),upgradedSalt));
     }
     atharClearLoginFailures_(username);
     const token=Utilities.getUuid()+Utilities.getUuid();
@@ -193,8 +229,9 @@ function atharApiWrite_(b) {
     let records=atharRows_(entity,user.schoolId,false);
     if(user.role==='evaluator' && entity==='visits') records=records.filter(x=>String(x.payload.evaluatorId)===user.userId);
     if(user.role==='teacher') {
-      if(entity==='visits') records=records.filter(x=>String(x.payload.teacherJobNumber)===String(user.jobNumber));
-      else if(entity==='plans') records=records.filter(x=>String(x.payload.teacherJobNumber)===String(user.jobNumber));
+      const jobNumber = String(user.jobNumber || '').trim();
+      if (!jobNumber) throw new Error('لم يُربط الرقم الوظيفي بحساب المعلم؛ راجع إدارة المنصة قبل عرض التقارير.');
+      if(entity==='visits' || entity==='plans') records=records.filter(x=>String(x.payload.teacherJobNumber || '').trim()===jobNumber);
       else throw new Error('ليست لديك صلاحية عرض هذا السجل.');
     }
     return {success:true,records:records};
