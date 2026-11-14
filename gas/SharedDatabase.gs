@@ -210,7 +210,8 @@ function atharApiWrite_(b) {
     const password=String(b.password||'');
     const name=String(b.name||'').trim();
     const role=String(b.role||'evaluator');
-    if(username.length<4 || password.length<12 || !name || ATHAR_DB.roles.indexOf(role)<0) throw new Error('تحقق من الاسم واسم المستخدم وكلمة المرور والصلاحية.');
+    const allowedRoles = admin.role==='platform_admin' ? ATHAR_DB.roles : ['vice_principal','evaluator','teacher'];
+    if(username.length<4 || password.length<12 || !name || allowedRoles.indexOf(role)<0) throw new Error('تحقق من الاسم واسم المستخدم وكلمة المرور والصلاحية. لا يحق لمسؤول المدرسة إنشاء حساب مسؤول منصة أو مسؤول مدرسة.');
     if(atharFindUser_(username)) throw new Error('اسم المستخدم مستخدم بالفعل.');
     const salt=Utilities.getUuid()+Utilities.getUuid();
     SpreadsheetApp.getActive().getSheetByName(ATHAR_DB.users).appendRow([Utilities.getUuid(),username,atharHash_(password,salt),'sha256:'+salt,name,role,admin.schoolId,String(b.jobNumber||''),'active',new Date().toISOString(),new Date().toISOString()]);
