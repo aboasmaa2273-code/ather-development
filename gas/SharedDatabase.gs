@@ -134,6 +134,22 @@ function atharFindUserById_(userId) {
   }
   return null;
 }
+function atharTeacherJobNumberInUse_(jobNumber, schoolId, excludeUserId) {
+  const wanted = String(jobNumber || '').trim();
+  if (!wanted) return false;
+  const sh = SpreadsheetApp.getActive().getSheetByName(ATHAR_DB.users);
+  if (!sh || sh.getLastRow() < 2) return false;
+  const rows = sh.getDataRange().getValues();
+  const headers = rows[0];
+  const ix = Object.fromEntries(headers.map((h,i)=>[String(h),i]));
+  return rows.slice(1).some(r =>
+    String(r[ix.role]) === 'teacher' &&
+    String(r[ix.schoolId]) === String(schoolId) &&
+    String(r[ix.jobNumber] || '').trim() === wanted &&
+    String(r[ix.userId]) !== String(excludeUserId || '')
+  );
+}
+
 function atharAdminTarget_(admin, userId) {
   const target = atharFindUserById_(userId);
   if (!target || String(target.status)==='deleted') throw new Error('الحساب المطلوب غير موجود.');
@@ -355,6 +371,8 @@ function atharApiWrite_(b) {
     const jobNumber=String(b.jobNumber===undefined?target.jobNumber||'':b.jobNumber).trim();
     const allowedRoles=admin.role==='platform_admin'?ATHAR_DB.roles:['vice_principal','evaluator','teacher'];
     if(username.length<4 || !name || allowedRoles.indexOf(role)<0) throw new Error('تحقق من الاسم واسم المستخدم والصلاحية.');
+    if (role==='teacher' && !jobNumber) throw new Error('يجب ربط حساب المعلم برقمه الوظيفي.');
+    if (role==='teacher' && atharTeacherJobNumberInUse_(jobNumber,target.schoolId,target.userId)) throw new Error('الرقم الوظيفي مرتبط بحساب معلم آخر في المدرسة.');
     const duplicate=atharFindUser_(username);
     if(duplicate && String(duplicate.userId)!==String(target.userId)) throw new Error('اسم المستخدم مستخدم بالفعل.');
     if(String(target.userId)===String(admin.userId) && role!==String(target.role)) throw new Error('لا يمكنك تغيير صلاحية حسابك النشط بنفسك.');
@@ -400,11 +418,14 @@ function atharApiWrite_(b) {
     const password=String(b.password||'');
     const name=String(b.name||'').trim();
     const role=String(b.role||'evaluator');
+    const jobNumber=String(b.jobNumber||'').trim();
     const allowedRoles = admin.role==='platform_admin' ? ATHAR_DB.roles : ['vice_principal','evaluator','teacher'];
     if(username.length<4 || password.length<12 || !name || allowedRoles.indexOf(role)<0) throw new Error('تحقق من الاسم واسم المستخدم وكلمة المرور والصلاحية. لا يحق لمسؤول المدرسة إنشاء حساب مسؤول منصة أو مسؤول مدرسة.');
+    if (role==='teacher' && !jobNumber) throw new Error('يجب ربط حساب المعلم برقمه الوظيفي.');
+    if (role==='teacher' && atharTeacherJobNumberInUse_(jobNumber,admin.schoolId,'')) throw new Error('الرقم الوظيفي مرتبط بحساب معلم آخر في المدرسة.');
     if(atharFindUser_(username)) throw new Error('اسم المستخدم مستخدم بالفعل.');
     const salt=Utilities.getUuid()+Utilities.getUuid();
-    SpreadsheetApp.getActive().getSheetByName(ATHAR_DB.users).appendRow([Utilities.getUuid(),username,atharHash_(password,salt),'pbkdf2:'+salt,name,role,admin.schoolId,String(b.jobNumber||''),'active',new Date().toISOString(),new Date().toISOString()]);
+    SpreadsheetApp.getActive().getSheetByName(ATHAR_DB.users).appendRow([Utilities.getUuid(),username,atharHash_(password,salt),'pbkdf2:'+salt,name,role,admin.schoolId,jobNumber,'active',new Date().toISOString(),new Date().toISOString()]);
     atharAudit_(admin,'إنشاء حساب', 'user',username,'إنشاء حساب جديد بصلاحية '+role,b.clientId);
     return {success:true};
     });
