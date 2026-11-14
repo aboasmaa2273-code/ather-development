@@ -123,13 +123,6 @@ function atharDelete_(user, entity, id, clientId) {
   throw new Error('السجل المطلوب غير موجود.');
 }
 
-function doGet(e) {
-  const t=HtmlService.createTemplateFromFile('Index');
-  t.platformTitle='أَثَر | منظومة التميز والتطوير التعليمي';
-  t.schoolName='مدرسة الصدارة بنين - الحلقة الثانية';
-  return t.evaluate().setTitle(t.platformTitle).addMetaTag('viewport','width=device-width, initial-scale=1.0').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-}
-
 /** POST من النموذج المخفي؛ يعيد رسالة إلى النافذة الأم بعد إتمام العملية. */
 function doPost(e) {
   let result={success:false};
