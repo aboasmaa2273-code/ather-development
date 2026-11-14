@@ -257,7 +257,7 @@ export const GasIntegrationHub: React.FC<GasIntegrationHubProps> = ({ language =
             <strong className="block text-[#172C40]">{isAr ? 'تشغيل التهيئة' : 'Run Initialization'}</strong>
             <p className="text-slate-600 text-[11px] leading-relaxed">
               {isAr ? (
-                <>اختر الدالة <code className="font-mono">initializeDatabase</code> واضغط زر «تشغيل (Run)» لبناء كافة الأوراق الـ 18 والمؤشرات الـ 22.</>
+                <>شغّل <code className="font-mono">initializeDatabase</code> لتهيئة أوراق المنصة القديمة، ثم أضف في «إعدادات المشروع ← خصائص النص البرمجي» الخاصيتين <code className="font-mono">ATHAR_BOOTSTRAP_USER</code> و<code className="font-mono">ATHAR_BOOTSTRAP_PASSWORD</code>. بعد ذلك شغّل <code className="font-mono">setupCentralDatabase</code> ثم <code className="font-mono">createInitialCentralAdmin</code> لإنشاء قاعدة البيانات المركزية وحساب المسؤول الأول.</>
               ) : (
                 <>Select <code className="font-mono">initializeDatabase</code> function and click Run to automatically create all 18 sheets and seed the 22 indicators.</>
               )}
