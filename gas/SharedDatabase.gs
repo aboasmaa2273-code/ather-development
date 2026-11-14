@@ -65,6 +65,27 @@ function atharPbkdf2_(password, salt, iterations) {
   }
   return result;
 }
+function atharConstantTimeEquals_(a, b) {
+  a = String(a || '');
+  b = String(b || '');
+  let diff = a.length ^ b.length;
+  const length = Math.max(a.length, b.length);
+  for (let i = 0; i < length; i++) {
+    diff |= (a.charCodeAt(i % (a.length || 1)) || 0) ^ (b.charCodeAt(i % (b.length || 1)) || 0);
+  }
+  return diff === 0;
+}
+// RFC 7914-style byte handling check against the published PBKDF2-HMAC-SHA256 test vector.
+// Safe to run manually in Apps Script; it does not read or modify spreadsheet data.
+function atharPasswordSelfTest() {
+  const actual = atharPbkdf2_('password', 'salt', 1)
+    .map(b => ('0' + ((b + 256) % 256).toString(16)).slice(-2)).join('');
+  const expected = '120fb6cffcf8b32c43e7225256c4f837a86548c92ccc35480805987cb70be17b';
+  if (!atharConstantTimeEquals_(actual, expected)) {
+    throw new Error('فشل اختبار PBKDF2؛ لا تنشئ حسابات مركزية قبل معالجة الخلل.');
+  }
+  return {success:true, test:'PBKDF2-HMAC-SHA256', vector:'RFC-compatible known-answer test'};
+}
 function atharVerifyPassword_(password, storedHash, storedSalt) {
   const encoded = String(storedHash || '');
   if (encoded.indexOf('pbkdf2-sha256:') === 0) {
@@ -72,11 +93,11 @@ function atharVerifyPassword_(password, storedHash, storedSalt) {
     const iterations = Number(parts[1]);
     if (!Number.isInteger(iterations) || iterations < 10000 || iterations > 20000) return false;
     const candidate = Utilities.base64Encode(atharPbkdf2_(String(password), String(storedSalt), iterations));
-    return candidate === parts[2];
+    return atharConstantTimeEquals_(candidate, parts[2]);
   }
   // Temporary backward compatibility: successful legacy logins are upgraded immediately.
   const legacy = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(storedSalt) + String(password), Utilities.Charset.UTF_8);
-  return Utilities.base64Encode(legacy) === encoded;
+  return atharConstantTimeEquals_(Utilities.base64Encode(legacy), encoded);
 }
 function atharJson_(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
 function atharFindUser_(username) {
