@@ -205,7 +205,9 @@ function atharRequire_(token, roles) {
   if (!user) throw new Error('انتهت الجلسة أو بيانات الدخول غير صالحة. يرجى تسجيل الدخول مجدداً.');
   // Re-check account state on every request so disabling/deleting a user takes effect immediately.
   const account = atharFindUserById_(user.userId);
-  if (!account || String(account.status) !== 'active' ||
+  const teacherRegistryValid = !account || String(account.role) !== 'teacher' ||
+    atharTeacherRegistryHasJobNumber_(account.jobNumber, account.schoolId);
+  if (!account || String(account.status) !== 'active' || !teacherRegistryValid ||
       String(account.role) !== String(user.role) ||
       String(account.schoolId) !== String(user.schoolId) ||
       String(account.jobNumber || '') !== String(user.jobNumber || '') ||
