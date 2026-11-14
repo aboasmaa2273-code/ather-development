@@ -187,7 +187,8 @@ function atharApiWrite_(b) {
   const user=atharRequire_(b.token);
   if(b.action==='list') {
     const entity=String(b.entity||'');
-    if(['platform_admin','school_admin','vice_principal'].includes(user.role)===false && ['teachers','settings','visitors'].includes(entity)) throw new Error('ليست لديك صلاحية عرض هذا السجل.');
+    if(['platform_admin','school_admin','vice_principal'].includes(user.role)===false && ['settings','visitors'].includes(entity)) throw new Error('ليست لديك صلاحية عرض هذا السجل.');
+    if(user.role==='teacher' && entity==='teachers') throw new Error('دليل المعلمين متاح للإدارة والمقيمين المخولين فقط.');
     if(!['teachers','visits','plans','settings','visitors'].includes(entity)) throw new Error('نوع السجل غير مدعوم.');
     let records=atharRows_(entity,user.schoolId,false);
     if(user.role==='evaluator' && entity==='visits') records=records.filter(x=>String(x.payload.evaluatorId)===user.userId);
