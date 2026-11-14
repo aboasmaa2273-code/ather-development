@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { CentralDatabaseClient } from '../services/centralDatabaseClient';
 import { GAS_FILES, GasFile } from '../services/gasCodeGenerator';
 import { 
   Database, 
@@ -20,6 +21,9 @@ interface GasIntegrationHubProps {
 export const GasIntegrationHub: React.FC<GasIntegrationHubProps> = ({ language = 'ar' }) => {
   const [selectedFile, setSelectedFile] = useState<GasFile>(GAS_FILES[0]);
   const [copiedFileName, setCopiedFileName] = useState<string | null>(null);
+  const [endpoint, setEndpoint] = useState<string>(() => CentralDatabaseClient.getEndpoint());
+  const [connectionMessage, setConnectionMessage] = useState<string>('');
+  const [testingConnection, setTestingConnection] = useState(false);
   
   const isAr = language === 'ar';
 
@@ -88,6 +92,21 @@ export const GasIntegrationHub: React.FC<GasIntegrationHubProps> = ({ language =
             ? 'تنبيه: ملفات قاعدة البيانات المركزية جاهزة ضمن المشروع، لكن الاتصال الفعلي لا يعمل بعد. لن نعرض نتيجة نجاح وهمية؛ يلزم نشر خادم Apps Script وربط عنوانه واختبار الاتصال قبل اعتماد المزامنة.'
             : 'Notice: the central database source is prepared, but the live connection is not active yet. No simulated success is shown; deploy the Apps Script backend, configure its URL, and verify connectivity before relying on synchronization.'}
         </div>
+      </div>
+
+      {/* Central database connection configuration */}
+      <div className="bg-white border border-[#E2E8F0] rounded-xl p-5 shadow-sm space-y-3" dir={isAr ? 'rtl' : 'ltr'}>
+        <div>
+          <h3 className="text-base font-black text-[#172C40]">{isAr ? 'إعداد اتصال قاعدة البيانات المركزية' : 'Central Database Connection'}</h3>
+          <p className="text-xs text-slate-500 mt-1">{isAr ? 'بعد نشر SharedDatabase.gs كتطبيق ويب، ألصق رابط /exec هنا ثم اختبر الاتصال. لا تضع أي كلمة مرور في هذا الحقل.' : 'After deploying SharedDatabase.gs as a Web App, paste its /exec URL here and test the connection. Never enter a password here.'}</p>
+        </div>
+        <div className="flex flex-col md:flex-row gap-2">
+          <input value={endpoint} onChange={e => setEndpoint(e.target.value)} dir="ltr" placeholder="https://script.google.com/macros/s/.../exec" className="flex-1 min-w-0 rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[#C6A66A]" />
+          <button type="button" onClick={() => { const r=CentralDatabaseClient.setEndpoint(endpoint); setConnectionMessage(r.success ? (isAr ? 'حُفظ رابط الخادم في هذا المتصفح. اختبر الاتصال للتحقق من عمله.' : 'Endpoint saved in this browser. Test the connection to verify it.') : (r.error || 'Invalid URL')); }} className="rounded-lg bg-[#172C40] text-white px-4 py-2 text-xs font-bold">{isAr ? 'حفظ الرابط' : 'Save URL'}</button>
+          <button type="button" disabled={testingConnection || !CentralDatabaseClient.getEndpoint()} onClick={async () => { setTestingConnection(true); setConnectionMessage(''); const r=await CentralDatabaseClient.testConnection(); setTestingConnection(false); setConnectionMessage(r.success ? (isAr ? 'نجح الاتصال بالخادم المركزي. لم تُنقل أو تُعدّل أي بيانات.' : 'Central server connected. No data was migrated or changed.') : (r.error || 'Connection failed')); }} className="rounded-lg border border-[#C6A66A] bg-[#F2EBDD] text-[#172C40] px-4 py-2 text-xs font-bold disabled:opacity-50">{testingConnection ? (isAr ? 'جارٍ الاختبار...' : 'Testing...') : (isAr ? 'اختبار الاتصال' : 'Test connection')}</button>
+        </div>
+        {connectionMessage && <p role="status" className="text-xs font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg p-3">{connectionMessage}</p>}
+        <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">{isAr ? 'تنبيه: اختبار الاتصال يثبت استجابة الخادم فقط. لم يتم بعد تحويل تسجيل الدخول أو مزامنة السجلات تلقائيًا؛ ستبقى البيانات المحلية كما هي حتى إتمام ترحيل واختبار آمن.' : 'Note: the health check only confirms the server responds. Login and automatic record synchronization are not switched over yet; local data remains unchanged until safe migration and testing are completed.'}</p>
       </div>
 
       {/* Code Inspector & Copy Center */}
