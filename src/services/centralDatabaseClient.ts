@@ -159,6 +159,17 @@ export class CentralDatabaseClient {
     return this.request({ action: 'upsert', entity, record, token: session.token, clientId: CLIENT_ID });
   }
 
+
+  /** استيراد دفعات محلية بعد تسجيل دخول مسؤول مركزي؛ حد أقصى 100 سجل للطلب. */
+  static async bulkImport(items: Array<{ entity: 'teachers' | 'visits' | 'plans'; record: Record<string, unknown> }>): Promise<CentralApiResponse> {
+    const session = this.getSession();
+    if (!session) return { success: false, error: 'سجّل الدخول بحساب مسؤول مركزي أولاً.' };
+    if (!Array.isArray(items) || items.length < 1 || items.length > 100) {
+      return { success: false, error: 'يجب أن تحتوي دفعة الاستيراد على سجل واحد إلى 100 سجل.' };
+    }
+    return this.request({ action: 'bulkImport', items, token: session.token, clientId: CLIENT_ID });
+  }
+
   static async logout(): Promise<CentralApiResponse> {
     const session = this.getSession();
     try { sessionStorage.removeItem(SESSION_KEY); } catch { /* ignore unavailable session storage */ }
