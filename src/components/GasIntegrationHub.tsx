@@ -15,6 +15,7 @@ import {
   Check
 } from 'lucide-react';
 import { Language } from '../i18n/translations';
+import { CentralUsersPanel } from './CentralUsersPanel';
 
 interface GasIntegrationHubProps {
   language?: Language;
@@ -202,6 +203,8 @@ export const GasIntegrationHub: React.FC<GasIntegrationHubProps> = ({ language =
         {migrationMessage && <p role="status" className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-700">{migrationMessage}</p>}
         <p className="text-[11px] leading-5 text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">{isAr ? 'مهم: هذه العملية تنسخ المعلمين والزيارات والخطط فقط، ولا تنقل حسابات المستخدمين أو كلمات المرور أو إعدادات المنصة. راجع الأعداد وتأكد من اتصال الخادم قبل البدء. لا تعتمد النسخة المركزية نهائيًا قبل اختبار الاسترجاع من جهاز آخر.' : 'Important: this copies teachers, visits, and plans only. It does not migrate user accounts, passwords, or platform settings. Verify the counts and connection first; do not rely on the central copy until retrieval is tested from another device.'}</p>
       </div>
+
+      {centralUserName && <CentralUsersPanel language={language} />}
 
       {/* Code Inspector & Copy Center */}
       <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm overflow-hidden grid grid-cols-1 lg:grid-cols-12">
