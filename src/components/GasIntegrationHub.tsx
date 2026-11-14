@@ -105,26 +105,12 @@ export const GasIntegrationHub: React.FC<GasIntegrationHubProps> = ({ language =
 
   const isAr = language === 'ar';
 
-  // Sheets Schema (all 18 sheets) with bilingual descriptions
+  // Central database schema: three sheets with bilingual descriptions
+  // The central backend uses three normalized sheets; records are partitioned by entity and school.
   const sheetsList = [
-    { name: 'Users', columns: 'id, schoolId, name, email, role, jobNumber, specialization, status, createdAt', desc: isAr ? 'المستخدمون والصلاحيات' : 'Users & Access Control' },
-    { name: 'Schools', columns: 'id, name, code, stage, welcomeMessage, primaryColor, secondaryColor, contactEmail, contactPhone', desc: isAr ? 'المدارس وعزل البيانات' : 'Schools & Multi-tenant Scoping' },
-    { name: 'Teachers', columns: 'id, schoolId, fullName, jobNumber, specialization, status, email, phone, dateAdded', desc: isAr ? 'سجل المعلمين وأرقامهم الوظيفية' : 'Teachers Registry & Job IDs' },
-    { name: 'Visits', columns: 'id, schoolId, academicYear, term, visitType, teacherId, teacherName, grade, section, subject, evaluatorName, totalStudents, attendedStudents, absentStudents, studentGender, visitors...', desc: isAr ? 'سجل الزيارات الصفية والطلبة والزائرين' : 'Classroom Observations & Observers' },
-    { name: 'VisitIndicators', columns: 'id, visitId, indicatorId, indicatorText, group, rating, notes, timestamp', desc: isAr ? 'رصد تفاصيل المؤشرات لكل زيارة' : 'Scored Performance Indicators' },
-    { name: 'VisitDomains', columns: 'id, visitId, domainId, domainName, rating', desc: isAr ? 'تقييم مجالات الأداء العام العشرة' : '10 Evaluation Domains Assessment' },
-    { name: 'IndicatorLibrary', columns: 'id, code, group, text, description, isActive', desc: isAr ? 'بنك المؤشرات الـ 22 المعتمدة' : 'Official 22 Indicators Bank' },
-    { name: 'EvaluationDomains', columns: 'id, code, name, description', desc: isAr ? 'مصفوفة مجالات التقييم' : 'Domain Evaluation Framework' },
-    { name: 'Subjects', columns: 'id, schoolId, name, isActive', desc: isAr ? 'المواد الدراسية' : 'Curriculum Subjects' },
-    { name: 'Grades', columns: 'id, schoolId, name, isActive', desc: isAr ? 'الصفوف الدراسية' : 'Academic Grades' },
-    { name: 'Sections', columns: 'id, schoolId, name, isActive', desc: isAr ? 'الشعب المدرسية' : 'Class Sections' },
-    { name: 'AcademicYears', columns: 'id, schoolId, yearLabel, isCurrent', desc: isAr ? 'الأعوام الأكاديمية' : 'Academic Years' },
-    { name: 'Terms', columns: 'id, schoolId, termName, isCurrent', desc: isAr ? 'الفصول الدراسية' : 'School Terms' },
-    { name: 'ImprovementPlans', columns: 'id, schoolId, teacherId, teacherName, improvementArea, relatedIndicator, goal, procedure, responsible, duration, followUpDate, status...', desc: isAr ? 'خطط التطوير المهني' : 'Professional Improvement Plans' },
-    { name: 'PlanFollowUps', columns: 'id, planId, followUpDate, evaluatorName, result, notes, newStatus, recordedAt', desc: isAr ? 'متابعة أثر خطط التطوير' : 'Plan Impact Follow-ups' },
-    { name: 'Settings', columns: 'key, value, updatedAt, updatedBy', desc: isAr ? 'إعدادات المنظومة وهوية المدرسة' : 'Platform & School Settings' },
-    { name: 'AuditLog', columns: 'id, schoolId, timestamp, userName, userRole, action, details', desc: isAr ? 'سجل تدقيق العمليات والأمان' : 'Security & Audit Logs' },
-    { name: 'ReportTemplates', columns: 'id, templateName, layoutJson, isDefault', desc: isAr ? 'قوالب التقارير المعتمدة' : 'Official Report Templates' }
+    { name: 'CentralRecords', columns: 'recordId, entity, schoolId, payload, createdAt, updatedAt, updatedBy, deletedAt', desc: isAr ? 'سجلات المعلمين والزيارات وخطط التطوير والإعدادات' : 'Teachers, visits, plans, and settings records' },
+    { name: 'CentralUsers', columns: 'userId, username, passwordHash, salt, name, role, schoolId, jobNumber, status, createdAt, updatedAt', desc: isAr ? 'حسابات المستخدمين وصلاحياتهم مع تجزئة كلمات المرور' : 'User accounts, roles, and password hashes' },
+    { name: 'CentralAudit', columns: 'eventId, schoolId, timestamp, userId, userName, userRole, action, entity, entityId, details, clientId', desc: isAr ? 'سجل التدقيق ومتابعة العمليات الأمنية' : 'Security and activity audit trail' }
   ];
 
   const handleCopyCode = (file: GasFile) => {
@@ -302,18 +288,18 @@ export const GasIntegrationHub: React.FC<GasIntegrationHubProps> = ({ language =
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div>
             <h3 className="text-base font-bold text-[#172C40] font-['Tajawal']">
-              {isAr ? 'هيكل قاعدة بيانات Google Sheets (18 ورقة عمل معتمدة)' : 'Google Sheets Database Schema (18 Standard Sheets)'}
+              {isAr ? 'هيكل قاعدة البيانات المركزية في Google Sheets (3 أوراق)' : 'Google Sheets Central Database Schema (3 Sheets)'}
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
               {isAr ? (
-                <>تُنشئها دالة <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-[#172C40]">initializeDatabase()</code> تلقائياً وتمنع تضارب العمليات المتزامنة بواسطة <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-[#172C40]">LockService</code>.</>
+                <>تُنشئها دالة <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-[#172C40]">setupCentralDatabase()</code> تلقائياً وتمنع تضارب العمليات المتزامنة بواسطة <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-[#172C40]">LockService</code>.</>
               ) : (
                 <>Automated by <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-[#172C40]">initializeDatabase()</code> with concurrent write-safety managed by <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-[#172C40]">LockService</code>.</>
               )}
             </p>
           </div>
           <span className="text-xs font-bold text-[#172C40] bg-[#F2EBDD] px-2.5 py-1 rounded">
-            {isAr ? '18 ورقة معرّفة' : '18 Defined Sheets'}
+            {isAr ? '3 أوراق معرّفة' : '3 Defined Sheets'}
           </span>
         </div>
 
