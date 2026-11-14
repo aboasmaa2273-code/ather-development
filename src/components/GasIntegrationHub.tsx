@@ -89,9 +89,6 @@ export const GasIntegrationHub: React.FC<GasIntegrationHubProps> = ({ language =
             : 'Notice: the central database source is prepared, but the live connection is not active yet. No simulated success is shown; deploy the Apps Script backend, configure its URL, and verify connectivity before relying on synchronization.'}
         </div>
       </div>
-          </p>
-        </div>
-      )}
 
       {/* Code Inspector & Copy Center */}
       <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm overflow-hidden grid grid-cols-1 lg:grid-cols-12">
