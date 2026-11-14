@@ -111,6 +111,29 @@ function atharFindUser_(username) {
   }
   return null;
 }
+function atharFindUserById_(userId) {
+  const sh = SpreadsheetApp.getActive().getSheetByName(ATHAR_DB.users);
+  if (!sh || sh.getLastRow() < 2) return null;
+  const values = sh.getDataRange().getValues();
+  const headers = values[0];
+  const ix = Object.fromEntries(headers.map((h,i)=>[String(h),i]));
+  for (let r=1;r<values.length;r++) if (String(values[r][ix.userId])===String(userId)) {
+    const o={}; headers.forEach((h,i)=>o[h]=values[r][i]); o._row=r+1; return o;
+  }
+  return null;
+}
+function atharAdminTarget_(admin, userId) {
+  const target = atharFindUserById_(userId);
+  if (!target || String(target.status)==='deleted') throw new Error('الحساب المطلوب غير موجود.');
+  if (admin.role !== 'platform_admin' && String(target.schoolId) !== String(admin.schoolId)) {
+    throw new Error('لا يمكنك إدارة حساب خارج نطاق مدرستك.');
+  }
+  if (admin.role !== 'platform_admin' && ['platform_admin','school_admin'].includes(String(target.role))) {
+    throw new Error('لا تملك صلاحية تعديل حساب إداري أعلى.');
+  }
+  return target;
+}
+
 // حدّ محاولات تسجيل الدخول: خمس محاولات فاشلة لكل اسم مستخدم خلال 15 دقيقة.
 function atharLoginRateKey_(username) {
   const digest=Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,String(username||'').trim().toLowerCase(),Utilities.Charset.UTF_8);
@@ -144,6 +167,14 @@ function atharSession_(token) {
 function atharRequire_(token, roles) {
   const user=atharSession_(token);
   if (!user) throw new Error('انتهت الجلسة أو بيانات الدخول غير صالحة. يرجى تسجيل الدخول مجدداً.');
+  // Re-check account state on every request so disabling/deleting a user takes effect immediately.
+  const account = atharFindUserById_(user.userId);
+  if (!account || String(account.status) !== 'active' ||
+      String(account.role) !== String(user.role) ||
+      String(account.schoolId) !== String(user.schoolId)) {
+    CacheService.getScriptCache().remove('athar_session_'+token);
+    throw new Error('تم إيقاف الحساب أو تغيير صلاحياته. يرجى التواصل مع إدارة المنظومة.');
+  }
   if (roles && roles.indexOf(user.role)===-1) throw new Error('ليست لديك صلاحية لتنفيذ هذه العملية.');
   return user;
 }
@@ -261,6 +292,61 @@ function atharApiWrite_(b) {
     if(!['platform_admin','school_admin','vice_principal'].includes(user.role)) throw new Error('سجل التدقيق متاح للإدارة المخولة فقط.');
     const sh=SpreadsheetApp.getActive().getSheetByName(ATHAR_DB.audit), rows=sh.getDataRange().getValues();
     return {success:true,records:rows.length>1?rows.slice(1).filter(r=>String(r[1])===user.schoolId).reverse().slice(0,5000):[]};
+  }
+  if(b.action==='adminListUsers') {
+    const admin=atharRequire_(b.token,['platform_admin','school_admin']);
+    const sh=SpreadsheetApp.getActive().getSheetByName(ATHAR_DB.users);
+    const rows=sh.getDataRange().getValues(), headers=rows[0], ix=Object.fromEntries(headers.map((h,i)=>[String(h),i]));
+    const users=rows.slice(1).filter(r=>String(r[ix.status])!=='deleted' &&
+      (admin.role==='platform_admin' || String(r[ix.schoolId])===String(admin.schoolId)))
+      .map(r=>({userId:String(r[ix.userId]),username:String(r[ix.username]),name:String(r[ix.name]),
+        role:String(r[ix.role]),schoolId:String(r[ix.schoolId]),jobNumber:String(r[ix.jobNumber]||''),
+        status:String(r[ix.status]),createdAt:r[ix.createdAt],updatedAt:r[ix.updatedAt]}));
+    return {success:true,users};
+  }
+  if(b.action==='adminUpdateUser') {
+    const admin=atharRequire_(b.token,['platform_admin','school_admin']);
+    const target=atharAdminTarget_(admin,String(b.userId||''));
+    const username=String(b.username||target.username).trim().toLowerCase();
+    const name=String(b.name||target.name).trim();
+    const role=String(b.role||target.role);
+    const jobNumber=String(b.jobNumber===undefined?target.jobNumber||'':b.jobNumber).trim();
+    const allowedRoles=admin.role==='platform_admin'?ATHAR_DB.roles:['vice_principal','evaluator','teacher'];
+    if(username.length<4 || !name || allowedRoles.indexOf(role)<0) throw new Error('تحقق من الاسم واسم المستخدم والصلاحية.');
+    const duplicate=atharFindUser_(username);
+    if(duplicate && String(duplicate.userId)!==String(target.userId)) throw new Error('اسم المستخدم مستخدم بالفعل.');
+    if(String(target.userId)===String(admin.userId) && role!==String(target.role)) throw new Error('لا يمكنك تغيير صلاحية حسابك النشط بنفسك.');
+    const password=String(b.password||'');
+    if(password && password.length<12) throw new Error('كلمة المرور الجديدة يجب ألا تقل عن 12 حرفاً.');
+    const sh=SpreadsheetApp.getActive().getSheetByName(ATHAR_DB.users);
+    const headers=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0];
+    const ix=Object.fromEntries(headers.map((h,i)=>[String(h),i+1]));
+    sh.getRange(target._row,ix.username).setValue(username);
+    sh.getRange(target._row,ix.name).setValue(name);
+    sh.getRange(target._row,ix.role).setValue(role);
+    sh.getRange(target._row,ix.jobNumber).setValue(jobNumber);
+    if(password) {
+      const salt=Utilities.getUuid()+Utilities.getUuid();
+      sh.getRange(target._row,ix.salt).setValue('pbkdf2:'+salt);
+      sh.getRange(target._row,ix.passwordHash).setValue(atharHash_(password,salt));
+    }
+    sh.getRange(target._row,ix.updatedAt).setValue(new Date().toISOString());
+    atharAudit_(admin,'تعديل حساب مستخدم','user',target.userId,'تحديث بيانات الحساب والصلاحيات.',b.clientId);
+    return {success:true};
+  }
+  if(b.action==='adminSetUserStatus') {
+    const admin=atharRequire_(b.token,['platform_admin','school_admin']);
+    const target=atharAdminTarget_(admin,String(b.userId||''));
+    const status=String(b.status||'');
+    if(!['active','disabled','deleted'].includes(status)) throw new Error('حالة الحساب غير معتمدة.');
+    if(String(target.userId)===String(admin.userId) && status!=='active') throw new Error('لا يمكنك إيقاف حسابك النشط.');
+    const sh=SpreadsheetApp.getActive().getSheetByName(ATHAR_DB.users);
+    const headers=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0];
+    const ix=Object.fromEntries(headers.map((h,i)=>[String(h),i+1]));
+    sh.getRange(target._row,ix.status).setValue(status);
+    sh.getRange(target._row,ix.updatedAt).setValue(new Date().toISOString());
+    atharAudit_(admin,status==='deleted'?'حذف منطقي لحساب':'تغيير حالة حساب','user',target.userId,'الحالة الجديدة: '+status,b.clientId);
+    return {success:true};
   }
   if(b.action==='adminCreateUser') {
     const admin=atharRequire_(b.token,['platform_admin','school_admin']);
