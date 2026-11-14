@@ -169,7 +169,7 @@ export default function App() {
           />
         )}
 
-        {isLoggedIn && activeTab === 'analytics' && (
+        {isLoggedIn && activeTab === 'analytics' && ['school_admin', 'platform_admin', 'vice_principal'].includes(currentUser.role) && (
           <AdvancedAnalyticsDashboard
             currentUser={currentUser}
             visits={visits}
