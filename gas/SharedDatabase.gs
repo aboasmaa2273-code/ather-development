@@ -41,6 +41,8 @@ function createInitialCentralAdmin() {
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
+    // Verify the Apps Script HMAC byte-array implementation before creating credentials.
+    atharPasswordSelfTest();
     setupCentralDatabase();
     const sh = SpreadsheetApp.getActive().getSheetByName(ATHAR_DB.users);
     const rows = sh.getDataRange().getValues();
