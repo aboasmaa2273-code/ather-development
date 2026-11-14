@@ -255,7 +255,7 @@ function atharUpsert_(user, entity, record, clientId) {
   if (entity==='teachers') {
     const jobNumber=String(record.jobNumber||'').trim();
     if (!jobNumber) throw new Error('الرقم الوظيفي للمعلم مطلوب.');
-    const duplicateTeacher=atharRows_('teachers',user.schoolId,false).some(x =>
+    const duplicateTeacher=atharRows_('teachers',user.schoolId,true).some(x =>
       x.recordId!==id && String(x.payload.jobNumber||'').trim()===jobNumber
     );
     if (duplicateTeacher) throw new Error('الرقم الوظيفي مسجل مسبقاً لمعلم آخر في المدرسة.');
