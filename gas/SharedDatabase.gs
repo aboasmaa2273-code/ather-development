@@ -22,7 +22,17 @@ function setupCentralDatabase() {
   Object.keys(schemas).forEach(name => {
     let sh = ss.getSheetByName(name);
     if (!sh) sh = ss.insertSheet(name);
-    if (sh.getLastRow() === 0) sh.appendRow(schemas[name]);
+    if (sh.getLastRow() === 0) {
+      sh.appendRow(schemas[name]);
+    } else {
+      if (sh.getLastColumn() < schemas[name].length) {
+        throw new Error('بنية ورقة ' + name + ' غير متوافقة؛ لم يتم تعديل بياناتها.');
+      }
+      const existingHeaders = sh.getRange(1,1,1,schemas[name].length).getValues()[0].map(String);
+      if (schemas[name].some((header,index) => existingHeaders[index] !== header)) {
+        throw new Error('عناوين أعمدة ورقة ' + name + ' لا تطابق مخطط قاعدة أَثَر؛ راجعها قبل المتابعة.');
+      }
+    }
     sh.setFrozenRows(1);
     sh.getRange(1,1,1,schemas[name].length).setBackground('#172C40').setFontColor('#FFFFFF').setFontWeight('bold');
   });
