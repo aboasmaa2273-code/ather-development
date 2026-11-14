@@ -280,7 +280,10 @@ function doPost(e) {
   const rawRequestId=String((e && e.parameter && e.parameter.requestId)||'');
   const requestIdValue=/^[A-Za-z0-9-]{1,80}$/.test(rawRequestId) ? rawRequestId : '';
   const requestId=JSON.stringify(requestIdValue);
-  return HtmlService.createHtmlOutput('<!doctype html><meta charset="utf-8"><script>parent.postMessage({type:"ATHAR_DB_RESULT",requestId:'+requestId+',payload:'+safe+'},"https://aboasmaa2273-code.github.io");</script>');
+  // The client communicates through a hidden cross-origin iframe. The response
+  // contains no UI or secrets and posts only to the fixed trusted Pages origin.
+  return HtmlService.createHtmlOutput('<!doctype html><meta charset="utf-8"><script>parent.postMessage({type:"ATHAR_DB_RESULT",requestId:'+requestId+',payload:'+safe+'},"https://aboasmaa2273-code.github.io");</script>')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 function atharApiWrite_(b) {
   if(b.action==='ping') return {success:true,service:'ATHAR_CENTRAL_DB',version:1,serverTime:new Date().toISOString()};
