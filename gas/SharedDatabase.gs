@@ -252,6 +252,12 @@ function atharUpsert_(user, entity, record, clientId) {
   if (user.role==='teacher' && entity==='plans') throw new Error('تحديث خطط المعلم يتم عبر إجراءات المتابعة المعتمدة فقط.');
   const id=String(record.id||record.recordId||'');
   if (!id) throw new Error('معرّف السجل مطلوب.');
+  if (entity==='visits' || entity==='plans') {
+    const teacherJobNumber=String(record.teacherJobNumber||'').trim();
+    if (!teacherJobNumber || !atharTeacherRegistryHasJobNumber_(teacherJobNumber,user.schoolId)) {
+      throw new Error('يجب ربط الزيارة أو خطة التطوير بمعلم مسجل في سجل المدرسة ورقمه الوظيفي الصحيح.');
+    }
+  }
   if (entity==='teachers') {
     const jobNumber=String(record.jobNumber||'').trim();
     if (!jobNumber) throw new Error('الرقم الوظيفي للمعلم مطلوب.');
