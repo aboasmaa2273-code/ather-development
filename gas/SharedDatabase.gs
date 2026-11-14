@@ -87,7 +87,7 @@ function atharConstantTimeEquals_(a, b) {
   }
   return diff === 0;
 }
-// RFC 7914-style byte handling check against the published PBKDF2-HMAC-SHA256 test vector.
+// PBKDF2-HMAC-SHA256 known-answer test using a published test vector.
 // Safe to run manually in Apps Script; it does not read or modify spreadsheet data.
 function atharPasswordSelfTest() {
   const actual = atharPbkdf2_('password', 'salt', 1)
