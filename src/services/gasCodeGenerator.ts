@@ -2,7 +2,12 @@ import sharedDatabaseSource from '../../gas/SharedDatabase.gs?raw';
 
 export interface GasFile {
   name: string;
-  type: 'gs' | export const GAS_FILES: GasFile[] = [
+  type: 'gs' | 'html' | 'json' | 'md';
+  description: string;
+  content: string;
+}
+
+export const GAS_FILES: GasFile[] = [
   {
     name: 'SharedDatabase.gs',
     type: 'gs',
