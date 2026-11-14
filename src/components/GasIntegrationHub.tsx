@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CentralDatabaseClient } from '../services/centralDatabaseClient';
+import { AtharStorageService } from '../services/storageService';
 import { GAS_FILES, GasFile } from '../services/gasCodeGenerator';
 import { 
   Database, 
@@ -25,7 +26,83 @@ export const GasIntegrationHub: React.FC<GasIntegrationHubProps> = ({ language =
   const [endpoint, setEndpoint] = useState<string>(() => CentralDatabaseClient.getEndpoint());
   const [connectionMessage, setConnectionMessage] = useState<string>('');
   const [testingConnection, setTestingConnection] = useState(false);
+  const [centralUsername, setCentralUsername] = useState('');
+  const [centralPassword, setCentralPassword] = useState('');
+  const [centralUserName, setCentralUserName] = useState(() => CentralDatabaseClient.getSession()?.user.name || '');
+  const [centralBusy, setCentralBusy] = useState(false);
+  const [migrationMessage, setMigrationMessage] = useState('');
+  const [migrationProgress, setMigrationProgress] = useState(0);
   
+
+  const localMigrationRecords = () => ([
+    ...AtharStorageService.getTeachers().map(record => ({ entity: 'teachers' as const, record: record as unknown as Record<string, unknown> })),
+    ...AtharStorageService.getVisits().map(record => ({ entity: 'visits' as const, record: record as unknown as Record<string, unknown> })),
+    ...AtharStorageService.getPlans().map(record => ({ entity: 'plans' as const, record: record as unknown as Record<string, unknown> }))
+  ]);
+
+  const handleCentralLogin = async () => {
+    setCentralBusy(true);
+    setMigrationMessage('');
+    const result = await CentralDatabaseClient.login(centralUsername, centralPassword);
+    setCentralPassword('');
+    setCentralBusy(false);
+    if (!result.success) {
+      setMigrationMessage(result.error || (isAr ? 'تعذر تسجيل الدخول المركزي.' : 'Central sign-in failed.'));
+      return;
+    }
+    const session = CentralDatabaseClient.getSession();
+    if (!session || !['platform_admin', 'school_admin'].includes(session.user.role)) {
+      await CentralDatabaseClient.logout();
+      setCentralUserName('');
+      setMigrationMessage(isAr ? 'الاستيراد متاح لمسؤول المنصة أو مسؤول المدرسة فقط.' : 'Migration requires a platform or school administrator.');
+      return;
+    }
+    setCentralUserName(session.user.name);
+    setMigrationMessage(isAr ? 'تم التحقق من حساب المسؤول المركزي. يمكنك الآن مراجعة عدد السجلات قبل الاستيراد.' : 'Central administrator verified. Review the record count before migration.');
+  };
+
+  const handleCentralLogout = async () => {
+    setCentralBusy(true);
+    await CentralDatabaseClient.logout();
+    setCentralUserName('');
+    setCentralBusy(false);
+    setMigrationMessage(isAr ? 'تم إنهاء الجلسة المركزية.' : 'Central session ended.');
+  };
+
+  const handleMigrateLocalData = async () => {
+    const session = CentralDatabaseClient.getSession();
+    if (!session || !['platform_admin', 'school_admin'].includes(session.user.role)) {
+      setMigrationMessage(isAr ? 'سجّل الدخول بحساب مسؤول مركزي أولاً.' : 'Sign in as a central administrator first.');
+      return;
+    }
+    const records = localMigrationRecords();
+    if (!records.length) {
+      setMigrationMessage(isAr ? 'لا توجد سجلات محلية لاستيرادها.' : 'No local records to migrate.');
+      return;
+    }
+    const confirmed = window.confirm(isAr
+      ? `سيتم إرسال ${records.length} سجلًا محليًا (معلمون وزيارات وخطط) إلى قاعدة البيانات المركزية. لن تُحذف البيانات المحلية. قد يؤدي تكرار الاستيراد إلى تحديث السجلات ذات المعرّفات نفسها. هل تريد المتابعة؟`
+      : `This will copy ${records.length} local teacher, visit, and plan records to the central database. Local data will not be deleted. Repeating migration updates records with matching IDs. Continue?`);
+    if (!confirmed) return;
+    setCentralBusy(true);
+    setMigrationProgress(0);
+    setMigrationMessage('');
+    let imported = 0;
+    for (let i = 0; i < records.length; i += 100) {
+      const result = await CentralDatabaseClient.bulkImport(records.slice(i, i + 100));
+      if (!result.success) {
+        setMigrationMessage((isAr ? 'توقف الاستيراد بعد ' : 'Migration stopped after ') + imported + (isAr ? ' سجلًا. السبب: ' : ' records. Reason: ') + (result.error || 'Unknown error'));
+        setCentralBusy(false);
+        setMigrationProgress(imported);
+        return;
+      }
+      imported += Number(result.imported || 0);
+      setMigrationProgress(imported);
+    }
+    setMigrationMessage((isAr ? 'اكتمل نسخ ' : 'Copied ') + imported + (isAr ? ' سجلًا إلى القاعدة المركزية. بقيت النسخة المحلية دون تغيير.' : ' records to the central database. Local copies remain unchanged.'));
+    setCentralBusy(false);
+  };
+
   const isAr = language === 'ar';
 
   // Sheets Schema (all 18 sheets) with bilingual descriptions
@@ -108,6 +185,36 @@ export const GasIntegrationHub: React.FC<GasIntegrationHubProps> = ({ language =
         </div>
         {connectionMessage && <p role="status" className="text-xs font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg p-3">{connectionMessage}</p>}
         <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">{isAr ? 'تنبيه: اختبار الاتصال يثبت استجابة الخادم فقط. لم يتم بعد تحويل تسجيل الدخول أو مزامنة السجلات تلقائيًا؛ ستبقى البيانات المحلية كما هي حتى إتمام ترحيل واختبار آمن.' : 'Note: the health check only confirms the server responds. Login and automatic record synchronization are not switched over yet; local data remains unchanged until safe migration and testing are completed.'}</p>
+      </div>
+
+
+      {/* Safe one-time local data migration */}
+      <div className="bg-white border border-[#E2E8F0] rounded-xl p-5 shadow-sm space-y-4" dir={isAr ? 'rtl' : 'ltr'}>
+        <div>
+          <h3 className="text-base font-black text-[#172C40]">{isAr ? 'ترحيل آمن للبيانات المحلية إلى القاعدة المركزية' : 'Safe Local-to-Central Data Migration'}</h3>
+          <p className="text-xs text-slate-500 mt-1">{isAr ? 'هذه خطوة نسخ اختيارية لا تحذف البيانات من هذا الجهاز. تتطلب حساب مسؤول مركزي أُنشئ في Google Apps Script.' : 'This optional copy operation never deletes local data. It requires a central administrator account created in Apps Script.'}</p>
+        </div>
+        {centralUserName ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-emerald-50 border border-emerald-200 p-3">
+            <span className="font-bold text-emerald-800">{isAr ? 'مسؤول مركزي متصل: ' : 'Central admin signed in: '}{centralUserName}</span>
+            <button type="button" disabled={centralBusy} onClick={handleCentralLogout} className="rounded-lg border border-slate-300 px-3 py-2 font-bold">{isAr ? 'تسجيل الخروج المركزي' : 'Central sign out'}</button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <input value={centralUsername} onChange={e => setCentralUsername(e.target.value)} dir="ltr" autoComplete="username" placeholder={isAr ? 'اسم مستخدم المسؤول' : 'Administrator username'} className="rounded-lg border border-slate-300 px-3 py-2 text-xs" />
+            <input value={centralPassword} onChange={e => setCentralPassword(e.target.value)} dir="ltr" type="password" autoComplete="current-password" placeholder={isAr ? 'كلمة مرور المسؤول' : 'Administrator password'} className="rounded-lg border border-slate-300 px-3 py-2 text-xs" />
+            <button type="button" disabled={centralBusy || !centralUsername.trim() || !centralPassword} onClick={handleCentralLogin} className="rounded-lg bg-[#172C40] text-white px-4 py-2 font-bold disabled:opacity-50">{centralBusy ? (isAr ? 'جارٍ التحقق...' : 'Verifying...') : (isAr ? 'دخول المسؤول المركزي' : 'Central admin sign in')}</button>
+          </div>
+        )}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="rounded-lg bg-slate-50 border border-slate-200 p-3"><div className="text-slate-500">{isAr ? 'المعلمون' : 'Teachers'}</div><div className="text-lg font-black">{AtharStorageService.getTeachers().length}</div></div>
+          <div className="rounded-lg bg-slate-50 border border-slate-200 p-3"><div className="text-slate-500">{isAr ? 'الزيارات' : 'Visits'}</div><div className="text-lg font-black">{AtharStorageService.getVisits().length}</div></div>
+          <div className="rounded-lg bg-slate-50 border border-slate-200 p-3"><div className="text-slate-500">{isAr ? 'خطط التطوير' : 'Improvement plans'}</div><div className="text-lg font-black">{AtharStorageService.getPlans().length}</div></div>
+        </div>
+        <button type="button" disabled={centralBusy || !centralUserName} onClick={handleMigrateLocalData} className="w-full rounded-lg bg-[#C6A66A] text-[#172C40] px-4 py-3 font-black disabled:opacity-40">{centralBusy ? (isAr ? 'جارٍ نسخ البيانات...' : 'Copying records...') : (isAr ? 'نسخ السجلات المحلية إلى القاعدة المركزية' : 'Copy local records to central database')}</button>
+        {centralBusy && migrationProgress > 0 && <p className="text-xs text-slate-600">{isAr ? 'تم إرسال ' : 'Sent '}{migrationProgress} {isAr ? 'سجلًا حتى الآن' : 'records so far'}</p>}
+        {migrationMessage && <p role="status" className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-700">{migrationMessage}</p>}
+        <p className="text-[11px] leading-5 text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">{isAr ? 'مهم: هذه العملية تنسخ المعلمين والزيارات والخطط فقط، ولا تنقل حسابات المستخدمين أو كلمات المرور أو إعدادات المنصة. راجع الأعداد وتأكد من اتصال الخادم قبل البدء. لا تعتمد النسخة المركزية نهائيًا قبل اختبار الاسترجاع من جهاز آخر.' : 'Important: this copies teachers, visits, and plans only. It does not migrate user accounts, passwords, or platform settings. Verify the counts and connection first; do not rely on the central copy until retrieval is tested from another device.'}</p>
       </div>
 
       {/* Code Inspector & Copy Center */}
