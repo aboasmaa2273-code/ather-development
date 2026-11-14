@@ -283,7 +283,7 @@ export const GasIntegrationHub: React.FC<GasIntegrationHubProps> = ({ language =
 
       </div>
 
-      {/* Complete 18-Sheets Database Schema */}
+      {/* Central Database Schema */}
       <div className="bg-white border border-[#E2E8F0] rounded-xl p-6 shadow-sm space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div>
@@ -294,7 +294,7 @@ export const GasIntegrationHub: React.FC<GasIntegrationHubProps> = ({ language =
               {isAr ? (
                 <>تُنشئها دالة <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-[#172C40]">setupCentralDatabase()</code> تلقائياً وتمنع تضارب العمليات المتزامنة بواسطة <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-[#172C40]">LockService</code>.</>
               ) : (
-                <>Automated by <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-[#172C40]">initializeDatabase()</code> with concurrent write-safety managed by <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-[#172C40]">LockService</code>.</>
+                <>Automated by <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-[#172C40]">setupCentralDatabase()</code> with concurrent write-safety managed by <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-[#172C40]">LockService</code>.</>
               )}
             </p>
           </div>
@@ -338,9 +338,9 @@ export const GasIntegrationHub: React.FC<GasIntegrationHubProps> = ({ language =
             <strong className="block text-[#172C40]">{isAr ? 'فتح Apps Script' : 'Open Apps Script'}</strong>
             <p className="text-slate-600 text-[11px] leading-relaxed">
               {isAr ? (
-                <>من قائمة «ملحقات (Extensions)»، اضغط على «Apps Script». احتفظ بملف <code className="font-mono">Code.gs</code> وملفات الواجهة <code className="font-mono">Index</code> و<code className="font-mono">Styles</code> و<code className="font-mono">Client</code>. ثم أضف ملف Script جديدًا باسم <code className="font-mono">SharedDatabase.gs</code> والصق كوده منفصلًا؛ لا تستبدل به ملف <code className="font-mono">Code.gs</code>.</>
+                <>من جدول البيانات الجديد افتح «ملحقات (Extensions) ← Apps Script». استخدم المشروع الجديد لخادم البيانات فقط: الصق كود <code className="font-mono">SharedDatabase.gs</code> في ملف <code className="font-mono">Code.gs</code> الافتراضي، أو أعد تسمية الملف إليه. لا تنسخ ملفات الواجهة القديمة أو ملف خادم قديمًا إلى هذا المشروع حتى لا تتكرر الدوال.</>
               ) : (
-                <>Keep the existing <code className="font-mono">Code.gs</code> and the <code className="font-mono">Index</code>, <code className="font-mono">Styles</code>, and <code className="font-mono">Client</code> HTML files. Add <code className="font-mono">SharedDatabase.gs</code> as a separate Script file; do not replace <code className="font-mono">Code.gs</code>.</>
+                <>From the new spreadsheet, open Extensions &gt; Apps Script. Use this new project for the data backend only: paste the <code className="font-mono">SharedDatabase.gs</code> code into the default <code className="font-mono">Code.gs</code> file, or rename that file. Do not copy the legacy UI files or another backend into this project, to avoid duplicate function definitions.</>
               )}
             </p>
           </div>
@@ -350,9 +350,9 @@ export const GasIntegrationHub: React.FC<GasIntegrationHubProps> = ({ language =
             <strong className="block text-[#172C40]">{isAr ? 'تشغيل التهيئة' : 'Run Initialization'}</strong>
             <p className="text-slate-600 text-[11px] leading-relaxed">
               {isAr ? (
-                <>شغّل <code className="font-mono">initializeDatabase</code> لتهيئة أوراق المنصة القديمة، ثم أضف في «إعدادات المشروع ← خصائص النص البرمجي» الخاصيتين <code className="font-mono">ATHAR_BOOTSTRAP_USER</code> و<code className="font-mono">ATHAR_BOOTSTRAP_PASSWORD</code>. بعد ذلك شغّل <code className="font-mono">setupCentralDatabase</code> ثم <code className="font-mono">createInitialCentralAdmin</code> لإنشاء قاعدة البيانات المركزية وحساب المسؤول الأول.</>
+                <>من «إعدادات المشروع ← خصائص النص البرمجي (Script Properties)» أضف <code className="font-mono">ATHAR_BOOTSTRAP_USER</code> باسم مستخدم من 4 أحرف على الأقل، و<code className="font-mono">ATHAR_BOOTSTRAP_PASSWORD</code> بكلمة مرور قوية من 12 حرفًا على الأقل. لا تشارك كلمة المرور مع أحد. بعد ذلك شغّل <code className="font-mono">createInitialCentralAdmin</code> مرة واحدة؛ ستُنشأ الأوراق الثلاث ويُختبر تشفير كلمة المرور تلقائيًا.</>
               ) : (
-                <>Run <code className="font-mono">initializeDatabase</code> for the existing platform sheets. Then add <code className="font-mono">ATHAR_BOOTSTRAP_USER</code> and <code className="font-mono">ATHAR_BOOTSTRAP_PASSWORD</code> in Project Settings &gt; Script Properties. Run <code className="font-mono">setupCentralDatabase</code>, then <code className="font-mono">createInitialCentralAdmin</code> to create the central database and first administrator.</>
+                <>In Project Settings &gt; Script Properties, add <code className="font-mono">ATHAR_BOOTSTRAP_USER</code> (at least 4 characters) and <code className="font-mono">ATHAR_BOOTSTRAP_PASSWORD</code> (at least 12 characters). Keep the password private. Then run <code className="font-mono">createInitialCentralAdmin</code> once; it creates the three sheets and automatically tests password hashing.</>
               )}
             </p>
           </div>
