@@ -43,7 +43,7 @@ function createInitialCentralAdmin() {
   const rows = sh.getDataRange().getValues();
   if (rows.length > 1) throw new Error('يوجد مستخدمون بالفعل؛ لن يتم إنشاء مسؤول أول أو استبدال بيانات الدخول.');
   const salt = Utilities.getUuid() + Utilities.getUuid();
-  sh.appendRow([Utilities.getUuid(),username,atharHash_(password,salt),'sha256:'+salt,'مسؤول منصة أَثَر','platform_admin','sch_alsadara_01','','active',new Date().toISOString(),new Date().toISOString()]);
+  sh.appendRow([Utilities.getUuid(),username,atharHash_(password,salt),'pbkdf2:'+salt,'مسؤول منصة أَثَر','platform_admin','sch_alsadara_01','','active',new Date().toISOString(),new Date().toISOString()]);
   props.deleteProperty('ATHAR_BOOTSTRAP_PASSWORD');
   return {success:true,message:'تم إنشاء حساب المسؤول المركزي. احتفظ ببيانات الدخول في مكان آمن.'};
 }
@@ -251,7 +251,7 @@ function atharApiWrite_(b) {
     if(username.length<4 || password.length<12 || !name || allowedRoles.indexOf(role)<0) throw new Error('تحقق من الاسم واسم المستخدم وكلمة المرور والصلاحية. لا يحق لمسؤول المدرسة إنشاء حساب مسؤول منصة أو مسؤول مدرسة.');
     if(atharFindUser_(username)) throw new Error('اسم المستخدم مستخدم بالفعل.');
     const salt=Utilities.getUuid()+Utilities.getUuid();
-    SpreadsheetApp.getActive().getSheetByName(ATHAR_DB.users).appendRow([Utilities.getUuid(),username,atharHash_(password,salt),'sha256:'+salt,name,role,admin.schoolId,String(b.jobNumber||''),'active',new Date().toISOString(),new Date().toISOString()]);
+    SpreadsheetApp.getActive().getSheetByName(ATHAR_DB.users).appendRow([Utilities.getUuid(),username,atharHash_(password,salt),'pbkdf2:'+salt,name,role,admin.schoolId,String(b.jobNumber||''),'active',new Date().toISOString(),new Date().toISOString()]);
     atharAudit_(admin,'إنشاء حساب', 'user',username,'إنشاء حساب جديد بصلاحية '+role,b.clientId);
     return {success:true};
   }
