@@ -151,6 +151,24 @@ function atharApiWrite_(b) {
     return {success:true,token,user:session,expiresIn:ATHAR_DB.cacheSeconds};
   }
   const user=atharRequire_(b.token);
+  if(b.action==='list') {
+    const entity=String(b.entity||'');
+    if(['platform_admin','school_admin','vice_principal'].includes(user.role)===false && ['teachers','settings','visitors'].includes(entity)) throw new Error('ليست لديك صلاحية عرض هذا السجل.');
+    if(!['teachers','visits','plans','settings','visitors'].includes(entity)) throw new Error('نوع السجل غير مدعوم.');
+    let records=atharRows_(entity,user.schoolId,false);
+    if(user.role==='evaluator' && entity==='visits') records=records.filter(x=>String(x.payload.evaluatorId)===user.userId);
+    if(user.role==='teacher') {
+      if(entity==='visits') records=records.filter(x=>String(x.payload.teacherJobNumber)===String(user.jobNumber));
+      else if(entity==='plans') records=records.filter(x=>String(x.payload.teacherJobNumber)===String(user.jobNumber));
+      else throw new Error('ليست لديك صلاحية عرض هذا السجل.');
+    }
+    return {success:true,records:records};
+  }
+  if(b.action==='audit') {
+    if(!['platform_admin','school_admin','vice_principal'].includes(user.role)) throw new Error('سجل التدقيق متاح للإدارة المخولة فقط.');
+    const sh=SpreadsheetApp.getActive().getSheetByName(ATHAR_DB.audit), rows=sh.getDataRange().getValues();
+    return {success:true,records:rows.length>1?rows.slice(1).filter(r=>String(r[1])===user.schoolId).reverse().slice(0,5000):[]};
+  }
   if(b.action==='adminCreateUser') {
     const admin=atharRequire_(b.token,['platform_admin','school_admin']);
     const username=String(b.username||'').trim().toLowerCase();
