@@ -182,6 +182,18 @@ function atharApiWrite_(b) {
     atharAudit_(admin,'إنشاء حساب', 'user',username,'إنشاء حساب جديد بصلاحية '+role,b.clientId);
     return {success:true};
   }
+  if(b.action==='bulkImport') {
+    if(!['platform_admin','school_admin'].includes(user.role)) throw new Error('استيراد السجلات القديمة مقتصر على مسؤول المنصة أو المدرسة.');
+    const items=Array.isArray(b.items)?b.items:[];
+    if(items.length>100) throw new Error('يرجى إرسال 100 سجل كحد أقصى في الدفعة الواحدة.');
+    const lock=LockService.getScriptLock(); lock.waitLock(20000);
+    try {
+      const imported=[];
+      items.forEach(item=>imported.push(atharUpsert_(user,String(item.entity),item.record||{},b.clientId)));
+      atharAudit_(user,'استيراد دفعة بيانات','migration','', 'عدد السجلات المستوردة: '+imported.length,b.clientId);
+      return {success:true,imported:imported.length};
+    } finally { lock.releaseLock(); }
+  }
   if(b.action==='upsert') {
     const lock=LockService.getScriptLock(); lock.waitLock(20000);
     try { return {success:true,record:atharUpsert_(user,String(b.entity),b.record||{},b.clientId)}; }
