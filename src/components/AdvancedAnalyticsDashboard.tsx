@@ -79,7 +79,11 @@ export const AdvancedAnalyticsDashboard: React.FC<Props> = ({ currentUser, visit
       (!from || d >= from) && (!to || d <= to) &&
       (!search || [v.teacherName, v.teacherJobNumber, v.evaluatorName, v.id, v.subject].some(x => String(x || '').toLowerCase().includes(search.toLowerCase())));
   }), [scopedVisits, evaluator, teacherId, visitType, term, academicYear, subject, grade, from, to, search]);
-  const evaluatorNames = Array.from(new Set([\n    ...scopedVisits.map(v => v.evaluatorName),\n    ...AtharStorageService.getRegisteredVisitors().filter(v => v.role !== 'teacher').map(v => v.name),\n    ...AtharStorageService.getAllUsers().filter(u => ['evaluator', 'school_admin', 'platform_admin', 'vice_principal'].includes(u.role)).map(u => u.name)\n  ].filter((name): name is string => Boolean(name && String(name).trim())))).sort((a, b) => a.localeCompare(b, 'ar'));
+  const evaluatorNames = Array.from(new Set([
+    ...scopedVisits.map(v => v.evaluatorName),
+    ...AtharStorageService.getRegisteredVisitors().filter(v => v.role !== 'teacher').map(v => v.name),
+    ...AtharStorageService.getAllUsers().filter(u => ['evaluator', 'school_admin', 'platform_admin', 'vice_principal'].includes(u.role)).map(u => u.name)
+  ].filter((name): name is string => Boolean(name && String(name).trim())))).sort((a, b) => a.localeCompare(b, 'ar'));
   const subjects = Array.from(new Set(scopedVisits.map(v => v.subject).filter(Boolean))).sort();
   const grades = Array.from(new Set(scopedVisits.map(v => v.grade).filter(Boolean))).sort();
   const terms = Array.from(new Set(scopedVisits.map(v => v.term).filter(Boolean))).sort();
