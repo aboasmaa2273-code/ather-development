@@ -177,6 +177,18 @@ export class CentralDatabaseClient {
     return this.request({ action: 'adminListUsers', token: session.token, clientId: CLIENT_ID });
   }
 
+  static async createUser(data: {
+    username: string; name: string; password: string;
+    role: CentralSessionUser['role']; jobNumber?: string;
+  }): Promise<CentralApiResponse> {
+    const session = this.getSession();
+    if (!session) return { success: false, error: 'سجّل الدخول بحساب إداري مركزي أولاً.' };
+    if (!data.username?.trim() || !data.name?.trim() || !data.password || !data.role) {
+      return { success: false, error: 'أدخل الاسم واسم المستخدم وكلمة المرور والصلاحية.' };
+    }
+    return this.request({ action: 'adminCreateUser', ...data, token: session.token, clientId: CLIENT_ID });
+  }
+
   static async updateUser(userId: string, changes: {
     username?: string; name?: string; role?: CentralSessionUser['role'];
     jobNumber?: string; password?: string;
