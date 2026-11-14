@@ -153,9 +153,11 @@ function atharTeacherJobNumberInUse_(jobNumber, schoolId, excludeUserId) {
 function atharTeacherRegistryHasJobNumber_(jobNumber, schoolId) {
   const wanted = String(jobNumber || '').trim();
   if (!wanted) return false;
-  return atharRows_('teachers', schoolId, false).some(row =>
+  const matches = atharRows_('teachers', schoolId, false).filter(row =>
     String(row.payload && row.payload.jobNumber || '').trim() === wanted
   );
+  // Ambiguous employee numbers must never grant access to multiple teachers' records.
+  return matches.length === 1;
 }
 
 function atharAdminTarget_(admin, userId) {
