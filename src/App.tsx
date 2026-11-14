@@ -177,6 +177,17 @@ export default function App() {
             plans={plans}
             auditLogs={auditLogs}
             onOpenVisitReport={(v) => setSelectedVisitForReport(v)}
+            onDeleteRecords={(visitIds, planIds) => {
+              const visitResult = AtharStorageService.deleteSelectedVisits(visitIds);
+              if (!visitResult.success) return { success: false, visitsDeleted: 0, plansDeleted: 0, error: visitResult.error };
+              const planResult = AtharStorageService.deleteSelectedPlans(planIds);
+              if (!planResult.success) {
+                refreshAllData();
+                return { success: false, visitsDeleted: visitResult.count, plansDeleted: 0, error: planResult.error };
+              }
+              refreshAllData();
+              return { success: true, visitsDeleted: visitResult.count, plansDeleted: planResult.count };
+            }}
           />
         )}
 
