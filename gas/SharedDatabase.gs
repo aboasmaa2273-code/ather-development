@@ -184,6 +184,13 @@ function atharRequire_(token, roles) {
   if (roles && roles.indexOf(user.role)===-1) throw new Error('ليست لديك صلاحية لتنفيذ هذه العملية.');
   return user;
 }
+function atharWithScriptLock_(callback) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try { return callback(); }
+  finally { lock.releaseLock(); }
+}
+
 function atharAudit_(user, action, entity, entityId, details, clientId) {
   SpreadsheetApp.getActive().getSheetByName(ATHAR_DB.audit).appendRow([
     Utilities.getUuid(),user.schoolId,new Date().toISOString(),user.userId,user.name,user.role,
@@ -328,6 +335,7 @@ function atharApiWrite_(b) {
     return {success:true,users};
   }
   if(b.action==='adminUpdateUser') {
+    return atharWithScriptLock_(function() {
     const admin=atharRequire_(b.token,['platform_admin','school_admin']);
     const target=atharAdminTarget_(admin,String(b.userId||''));
     const username=String(b.username||target.username).trim().toLowerCase();
@@ -356,8 +364,10 @@ function atharApiWrite_(b) {
     sh.getRange(target._row,ix.updatedAt).setValue(new Date().toISOString());
     atharAudit_(admin,'تعديل حساب مستخدم','user',target.userId,'تحديث بيانات الحساب والصلاحيات.',b.clientId);
     return {success:true};
+    });
   }
   if(b.action==='adminSetUserStatus') {
+    return atharWithScriptLock_(function() {
     const admin=atharRequire_(b.token,['platform_admin','school_admin']);
     const target=atharAdminTarget_(admin,String(b.userId||''));
     const status=String(b.status||'');
@@ -370,8 +380,10 @@ function atharApiWrite_(b) {
     sh.getRange(target._row,ix.updatedAt).setValue(new Date().toISOString());
     atharAudit_(admin,status==='deleted'?'حذف منطقي لحساب':'تغيير حالة حساب','user',target.userId,'الحالة الجديدة: '+status,b.clientId);
     return {success:true};
+    });
   }
   if(b.action==='adminCreateUser') {
+    return atharWithScriptLock_(function() {
     const admin=atharRequire_(b.token,['platform_admin','school_admin']);
     const username=String(b.username||'').trim().toLowerCase();
     const password=String(b.password||'');
@@ -384,6 +396,7 @@ function atharApiWrite_(b) {
     SpreadsheetApp.getActive().getSheetByName(ATHAR_DB.users).appendRow([Utilities.getUuid(),username,atharHash_(password,salt),'pbkdf2:'+salt,name,role,admin.schoolId,String(b.jobNumber||''),'active',new Date().toISOString(),new Date().toISOString()]);
     atharAudit_(admin,'إنشاء حساب', 'user',username,'إنشاء حساب جديد بصلاحية '+role,b.clientId);
     return {success:true};
+    });
   }
   if(b.action==='bulkImport') {
     if(!['platform_admin','school_admin'].includes(user.role)) throw new Error('استيراد السجلات القديمة مقتصر على مسؤول المنصة أو المدرسة.');
@@ -402,7 +415,7 @@ function atharApiWrite_(b) {
     try { return {success:true,record:atharUpsert_(user,String(b.entity),b.record||{},b.clientId)}; }
     finally { lock.releaseLock(); }
   }
-  if(b.action==='delete') return atharDelete_(user,String(b.entity),String(b.id),b.clientId);
+  if(b.action==='delete') return atharWithScriptLock_(function() { return atharDelete_(user,String(b.entity),String(b.id),b.clientId); });
   if(b.action==='logout') { CacheService.getScriptCache().remove('athar_session_'+b.token); atharAudit_(user,'تسجيل خروج','session',user.userId,'تسجيل خروج.',b.clientId); return {success:true}; }
   throw new Error('طلب كتابة غير معروف.');
 }
