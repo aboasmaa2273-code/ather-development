@@ -56,11 +56,15 @@ function atharHash_(password, salt) {
   return 'pbkdf2-sha256:' + iterations + ':' + Utilities.base64Encode(key);
 }
 function atharPbkdf2_(password, salt, iterations) {
-  const block = salt + String.fromCharCode(0,0,0,1);
-  let u = Utilities.computeHmacSha256Signature(block, password, Utilities.Charset.UTF_8);
+  // Use the documented Byte[]/Byte[] HMAC overload for every PBKDF2 round.
+  // Apps Script's String overload cannot be mixed with a Byte[] message.
+  const saltBytes = Utilities.newBlob(String(salt)).getBytes();
+  const block = saltBytes.concat([0, 0, 0, 1]); // INT_32_BE(1)
+  const keyBytes = Utilities.newBlob(String(password)).getBytes();
+  let u = Utilities.computeHmacSha256Signature(block, keyBytes);
   const result = u.slice();
   for (let i = 1; i < iterations; i++) {
-    u = Utilities.computeHmacSha256Signature(u, password);
+    u = Utilities.computeHmacSha256Signature(u, keyBytes);
     for (let j = 0; j < result.length; j++) result[j] = result[j] ^ u[j];
   }
   return result;
