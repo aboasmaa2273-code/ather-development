@@ -252,6 +252,14 @@ function atharUpsert_(user, entity, record, clientId) {
   if (user.role==='teacher' && entity==='plans') throw new Error('تحديث خطط المعلم يتم عبر إجراءات المتابعة المعتمدة فقط.');
   const id=String(record.id||record.recordId||'');
   if (!id) throw new Error('معرّف السجل مطلوب.');
+  if (entity==='teachers') {
+    const jobNumber=String(record.jobNumber||'').trim();
+    if (!jobNumber) throw new Error('الرقم الوظيفي للمعلم مطلوب.');
+    const duplicateTeacher=atharRows_('teachers',user.schoolId,false).some(x =>
+      x.recordId!==id && String(x.payload.jobNumber||'').trim()===jobNumber
+    );
+    if (duplicateTeacher) throw new Error('الرقم الوظيفي مسجل مسبقاً لمعلم آخر في المدرسة.');
+  }
   if (entity==='visits' && !['platform_admin','school_admin','vice_principal','evaluator'].includes(user.role)) throw new Error('غير مصرح بحفظ الزيارات.');
   if (['teachers','settings','visitors'].includes(entity) && !['platform_admin','school_admin'].includes(user.role)) throw new Error('هذه العملية مقتصرة على إدارة المنصة والمدرسة.');
   const sh=SpreadsheetApp.getActive().getSheetByName(ATHAR_DB.records);
