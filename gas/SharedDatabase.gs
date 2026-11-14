@@ -202,6 +202,13 @@ function atharRows_(entity, schoolId, includeDeleted) {
 function atharUpsert_(user, entity, record, clientId) {
   const allowed=['teachers','visits','plans','settings','visitors'];
   if (allowed.indexOf(entity)===-1) throw new Error('نوع سجل غير مدعوم.');
+  if (!record || typeof record !== 'object' || Array.isArray(record)) throw new Error('بيانات السجل غير صالحة.');
+  const requestedSchoolId = String(record.schoolId || '').trim();
+  if (requestedSchoolId && requestedSchoolId !== String(user.schoolId)) {
+    throw new Error('لا يمكنك حفظ سجل تابع لمدرسة أخرى.');
+  }
+  // The authenticated account, never the browser payload, determines the school scope.
+  record = Object.assign({}, record, {schoolId:String(user.schoolId)});
   if (user.role==='teacher' && entity!=='plans') throw new Error('المعلم لا يملك صلاحية تعديل هذا النوع من السجلات.');
   if (user.role==='teacher' && entity==='plans') throw new Error('تحديث خطط المعلم يتم عبر إجراءات المتابعة المعتمدة فقط.');
   const id=String(record.id||record.recordId||'');
