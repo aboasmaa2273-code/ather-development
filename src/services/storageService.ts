@@ -816,7 +816,7 @@ export class AtharStorageService {
     };
     logs.unshift(newEntry);
     // Keep last 150 logs
-    setStored(STORAGE_KEYS.AUDIT_LOGS, logs.slice(0, 150));
+    setStored(STORAGE_KEYS.AUDIT_LOGS, logs.slice(0, 2000));
   }
 
   static clearAuditLogs(): { success: boolean; error?: string } {
