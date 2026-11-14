@@ -243,8 +243,17 @@ function doPost(e) {
     const body=JSON.parse((e.parameter && e.parameter.payload)||'{}');
     result=atharApiWrite_(body);
   } catch(err) { result={success:false,error:String(err.message||err)}; }
-  const safe=JSON.stringify(result).replace(/</g,'\\u003c');
-  const requestId=JSON.stringify(String((e.parameter && e.parameter.requestId)||''));
+  // Escape every value embedded in the HTML script context. In particular,
+  // never interpolate an arbitrary requestId containing a literal </script>.
+  const safe=JSON.stringify(result)
+    .replace(/</g,'\\u003c')
+    .replace(/>/g,'\\u003e')
+    .replace(/&/g,'\\u0026')
+    .replace(/\\u2028/g,'\\\\u2028')
+    .replace(/\\u2029/g,'\\\\u2029');
+  const rawRequestId=String((e && e.parameter && e.parameter.requestId)||'');
+  const requestIdValue=/^[A-Za-z0-9-]{1,80}$/.test(rawRequestId) ? rawRequestId : '';
+  const requestId=JSON.stringify(requestIdValue);
   return HtmlService.createHtmlOutput('<!doctype html><meta charset="utf-8"><script>parent.postMessage({type:"ATHAR_DB_RESULT",requestId:'+requestId+',payload:'+safe+'},"https://aboasmaa2273-code.github.io");</script>');
 }
 function atharApiWrite_(b) {
