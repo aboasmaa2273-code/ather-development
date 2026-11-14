@@ -154,7 +154,8 @@ function atharTeacherRegistryHasJobNumber_(jobNumber, schoolId) {
   const wanted = String(jobNumber || '').trim();
   if (!wanted) return false;
   const matches = atharRows_('teachers', schoolId, false).filter(row =>
-    String(row.payload && row.payload.jobNumber || '').trim() === wanted
+    String(row.payload && row.payload.jobNumber || '').trim() === wanted &&
+    String(row.payload && row.payload.status || 'active') === 'active'
   );
   // Ambiguous employee numbers must never grant access to multiple teachers' records.
   return matches.length === 1;
