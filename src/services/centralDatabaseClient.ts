@@ -161,6 +161,30 @@ export class CentralDatabaseClient {
 
 
   /** استيراد دفعات محلية بعد تسجيل دخول مسؤول مركزي؛ حد أقصى 100 سجل للطلب. */
+  /** Central account administration; authorization is enforced again by Apps Script. */
+  static async listUsers(): Promise<CentralApiResponse> {
+    const session = this.getSession();
+    if (!session) return { success: false, error: 'سجّل الدخول بحساب إداري مركزي أولاً.' };
+    return this.request({ action: 'adminListUsers', token: session.token, clientId: CLIENT_ID });
+  }
+
+  static async updateUser(userId: string, changes: {
+    username?: string; name?: string; role?: CentralSessionUser['role'];
+    jobNumber?: string; password?: string;
+  }): Promise<CentralApiResponse> {
+    const session = this.getSession();
+    if (!session) return { success: false, error: 'انتهت جلسة الدخول المركزي أو لم يتم تسجيل الدخول.' };
+    if (!userId) return { success: false, error: 'معرّف الحساب مطلوب.' };
+    return this.request({ action: 'adminUpdateUser', userId, ...changes, token: session.token, clientId: CLIENT_ID });
+  }
+
+  static async setUserStatus(userId: string, status: 'active' | 'disabled' | 'deleted'): Promise<CentralApiResponse> {
+    const session = this.getSession();
+    if (!session) return { success: false, error: 'انتهت جلسة الدخول المركزي أو لم يتم تسجيل الدخول.' };
+    if (!userId) return { success: false, error: 'معرّف الحساب مطلوب.' };
+    return this.request({ action: 'adminSetUserStatus', userId, status, token: session.token, clientId: CLIENT_ID });
+  }
+
   static async bulkImport(items: Array<{ entity: 'teachers' | 'visits' | 'plans'; record: Record<string, unknown> }>): Promise<CentralApiResponse> {
     const session = this.getSession();
     if (!session) return { success: false, error: 'سجّل الدخول بحساب مسؤول مركزي أولاً.' };
