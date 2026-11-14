@@ -149,7 +149,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         {/* Body Content */}
         <div className="p-6">
           {tab === 'login' ? (
-            <form onSubmit={handleLoginSubmit} className="space-y-4">
+            <form onSubmit={handleLoginSubmit} className="space-y-4" autoComplete="on">
               {errorMessage && (
                 <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
@@ -165,6 +165,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 <div className="relative">
                   <input
                     type="text"
+                    name="username"
+                    autoComplete="username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder={isEn ? 'e.g. arabic or principal' : 'مثال: arabic أو principal'}
@@ -184,6 +186,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••"
