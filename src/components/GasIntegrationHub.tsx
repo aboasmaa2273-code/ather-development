@@ -10,7 +10,8 @@ import {
   ShieldCheck, 
   BookOpen,
   Terminal,
-  HelpCircle
+  HelpCircle,
+  Check
 } from 'lucide-react';
 import { Language } from '../i18n/translations';
 
