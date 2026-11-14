@@ -172,7 +172,8 @@ function atharRequire_(token, roles) {
   if (!account || String(account.status) !== 'active' ||
       String(account.role) !== String(user.role) ||
       String(account.schoolId) !== String(user.schoolId) ||
-      String(account.jobNumber || '') !== String(user.jobNumber || '')) {
+      String(account.jobNumber || '') !== String(user.jobNumber || '') ||
+      String(account.updatedAt || '') !== String(user.accountUpdatedAt || '')) {
     CacheService.getScriptCache().remove('athar_session_'+token);
     throw new Error('تم إيقاف الحساب أو تغيير صلاحياته. يرجى التواصل مع إدارة المنظومة.');
   }
@@ -268,7 +269,8 @@ function atharApiWrite_(b) {
     }
     atharClearLoginFailures_(username);
     const token=Utilities.getUuid()+Utilities.getUuid();
-    const session={userId:String(u.userId),name:String(u.name),role:String(u.role),schoolId:String(u.schoolId),jobNumber:String(u.jobNumber||'')};
+    const refreshedUser = atharFindUserById_(u.userId) || u;
+    const session={userId:String(u.userId),name:String(refreshedUser.name),role:String(refreshedUser.role),schoolId:String(refreshedUser.schoolId),jobNumber:String(refreshedUser.jobNumber||''),accountUpdatedAt:String(refreshedUser.updatedAt||'')};
     CacheService.getScriptCache().put('athar_session_'+token,JSON.stringify(session),ATHAR_DB.cacheSeconds);
     atharAudit_(session,'تسجيل دخول','session',session.userId,'تسجيل دخول ناجح.',b.clientId);
     return {success:true,token,user:session,expiresIn:ATHAR_DB.cacheSeconds};
