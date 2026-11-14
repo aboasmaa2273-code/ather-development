@@ -3,9 +3,7 @@ import { GAS_FILES, GasFile } from '../services/gasCodeGenerator';
 import { 
   Database, 
   Copy, 
-  Check, 
   Download, 
-  Play, 
   FileCode, 
   Layers, 
   ShieldCheck, 
@@ -23,10 +21,6 @@ export const GasIntegrationHub: React.FC<GasIntegrationHubProps> = ({ language =
   const [selectedFile, setSelectedFile] = useState<GasFile>(GAS_FILES[0]);
   const [copiedFileName, setCopiedFileName] = useState<string | null>(null);
   
-  // Database initialization simulation state
-  const [isInitializing, setIsInitializing] = useState(false);
-  const [initResult, setInitResult] = useState<any | null>(null);
-
   const isAr = language === 'ar';
 
   // Sheets Schema (all 18 sheets) with bilingual descriptions
@@ -67,23 +61,6 @@ export const GasIntegrationHub: React.FC<GasIntegrationHubProps> = ({ language =
     URL.revokeObjectURL(url);
   };
 
-  const handleSimulateInit = () => {
-    setIsInitializing(true);
-    setInitResult(null);
-
-    setTimeout(() => {
-      setIsInitializing(false);
-      setInitResult({
-        success: true,
-        sheetsCreated: 18,
-        indicatorsSeeded: 22,
-        timeZone: 'Asia/Dubai',
-        message: isAr 
-          ? 'تمت تهيئة قاعدة البيانات وأوراق العمل الـ 18 بنجاح تام وفق Schema منظومة أَثَر.' 
-          : 'Database initialized successfully! All 18 sheets generated matching ATHAR schema.'
-      });
-    }, 1500);
-  };
 
   return (
     <div className="space-y-8 text-xs text-[#172C40]">
@@ -106,31 +83,12 @@ export const GasIntegrationHub: React.FC<GasIntegrationHubProps> = ({ language =
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={handleSimulateInit}
-            disabled={isInitializing}
-            className="px-4 py-2 bg-[#C6A66A] text-[#172C40] rounded-lg font-bold hover:bg-[#b8975b] transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50"
-          >
-            <Play className="w-3.5 h-3.5 fill-current" />
-            <span>{isInitializing ? (isAr ? 'جاري اختبار التهيئة...' : 'Testing Initialization...') : (isAr ? 'تشغيل اختبار initializeDatabase()' : 'Run initializeDatabase() Test')}</span>
-          </button>
+        <div className="max-w-xl rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900 text-xs leading-6">
+          {isAr
+            ? 'تنبيه: ملفات قاعدة البيانات المركزية جاهزة ضمن المشروع، لكن الاتصال الفعلي لا يعمل بعد. لن نعرض نتيجة نجاح وهمية؛ يلزم نشر خادم Apps Script وربط عنوانه واختبار الاتصال قبل اعتماد المزامنة.'
+            : 'Notice: the central database source is prepared, but the live connection is not active yet. No simulated success is shown; deploy the Apps Script backend, configure its URL, and verify connectivity before relying on synchronization.'}
         </div>
       </div>
-
-      {/* Simulator feedback */}
-      {initResult && (
-        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 space-y-1">
-          <div className="flex items-center gap-2 font-bold text-sm">
-            <Check className="w-4 h-4 text-emerald-700" />
-            <span>{initResult.message}</span>
-          </div>
-          <p className="text-[11px] text-emerald-800">
-            {isAr ? (
-              <>تم فحص وإنشاء وتنسيق الـ ({initResult.sheetsCreated}) ورقة مع الرؤوس الملونة بخلفية كحلية `#172C40`، وتعبئة ({initResult.indicatorsSeeded}) مؤشراً في ورقة <code className="font-mono">IndicatorLibrary</code> بتوقيت دبي.</>
-            ) : (
-              <>Verified and formatted all ({initResult.sheetsCreated}) sheets with navy headers `#172C40`, and seeded ({initResult.indicatorsSeeded}) indicators into <code className="font-mono">IndicatorLibrary</code> (Asia/Dubai timezone).</>
-            )}
           </p>
         </div>
       )}
