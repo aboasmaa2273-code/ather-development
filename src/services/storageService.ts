@@ -918,6 +918,32 @@ export class AtharStorageService {
     return { success: true };
   }
 
+  static deleteSelectedVisits(visitIds: string[]): { success: boolean; count: number; error?: string } {
+    const currentUser = this.getCurrentUser();
+    if (!this.canDeleteDemoData(currentUser)) return { success: false, count: 0, error: 'غير مصرح لك بحذف السجلات.' };
+    const ids = new Set(visitIds);
+    if (!ids.size) return { success: true, count: 0 };
+    const visits = this.getVisits();
+    const removed = visits.filter(v => ids.has(v.id));
+    if (!removed.length) return { success: false, count: 0, error: 'لم يتم العثور على الزيارات المحددة.' };
+    setStored(STORAGE_KEYS.VISITS, visits.filter(v => !ids.has(v.id)));
+    this.logAction(currentUser, 'حذف زيارات محددة', `تم حذف ${removed.length} زيارة محددة: ${removed.map(v => v.id).join('، ')}`);
+    return { success: true, count: removed.length };
+  }
+
+  static deleteSelectedPlans(planIds: string[]): { success: boolean; count: number; error?: string } {
+    const currentUser = this.getCurrentUser();
+    if (!this.canDeleteDemoData(currentUser)) return { success: false, count: 0, error: 'غير مصرح لك بحذف السجلات.' };
+    const ids = new Set(planIds);
+    if (!ids.size) return { success: true, count: 0 };
+    const plans = this.getPlans();
+    const removed = plans.filter(p => ids.has(p.id));
+    if (!removed.length) return { success: false, count: 0, error: 'لم يتم العثور على خطط التحسين المحددة.' };
+    setStored(STORAGE_KEYS.PLANS, plans.filter(p => !ids.has(p.id)));
+    this.logAction(currentUser, 'حذف خطط تحسين محددة', `تم حذف ${removed.length} خطة تحسين محددة: ${removed.map(p => p.id).join('، ')}`);
+    return { success: true, count: removed.length };
+  }
+
   // Demo Data Management & Selective Cleanup (إدارة وحذف السجلات التجريبية - مقتصرة على المخولين)
   static clearDemoVisits(): { success: boolean; count: number; error?: string } {
     const currentUser = this.getCurrentUser();
