@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { ClassroomVisit, Teacher, ImprovementPlan, AuditLogEntry, User } from '../types';
 import { OFFICIAL_INDICATORS } from '../data/defaultData';
 import { AtharStorageService } from '../services/storageService';
-import { FileText, Users, ClipboardList, GraduationCap, ListChecks, ChartNoAxesCombined, Archive, History, Download, Search, CalendarDays, Filter, Eye, Printer, ShieldCheck, RotateCcw } from 'lucide-react';
+import { FileText, Users, ClipboardList, GraduationCap, ListChecks, ChartNoAxesCombined, Archive, History, Download, Search, CalendarDays, Filter, Eye, Printer, ShieldCheck, RotateCcw, Trash2, X, CheckSquare } from 'lucide-react';
 
 type Section = 'overview' | 'evaluators' | 'visits' | 'teachers' | 'plans' | 'analytics' | 'archive' | 'audit';
 interface Props {
@@ -12,6 +12,7 @@ interface Props {
   plans: ImprovementPlan[];
   auditLogs: AuditLogEntry[];
   onOpenVisitReport: (visit: ClassroomVisit) => void;
+  onDeleteRecords: (visitIds: string[], planIds: string[]) => { success: boolean; visitsDeleted: number; plansDeleted: number; error?: string };
 }
 const sections: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: 'overview', label: 'الملخص العام', icon: ChartNoAxesCombined },
@@ -30,7 +31,27 @@ const dateValue = (value: string) => {
 };
 const esc = (v: unknown) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
 
-export const AdvancedAnalyticsDashboard: React.FC<Props> = ({ currentUser, visits, teachers, plans, auditLogs, onOpenVisitReport }) => {
+export const AdvancedAnalyticsDashboard: React.FC<Props> = ({ currentUser, visits, teachers, plans, auditLogs, onOpenVisitReport, onDeleteRecords }) => {
+  const [cleanupOpen, setCleanupOpen] = useState(false);
+  const [selectedVisitIds, setSelectedVisitIds] = useState<string[]>([]);
+  const [selectedPlanIds, setSelectedPlanIds] = useState<string[]>([]);
+  const [cleanupTab, setCleanupTab] = useState<'visits' | 'plans'>('visits');
+  const toggleVisit = (id: string) => setSelectedVisitIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const togglePlan = (id: string) => setSelectedPlanIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const selectAllVisits = () => setSelectedVisitIds(prev => prev.length === visits.length ? [] : visits.map(v => v.id));
+  const selectAllPlans = () => setSelectedPlanIds(prev => prev.length === plans.length ? [] : plans.map(p => p.id));
+  const executeCleanup = () => {
+    const count = selectedVisitIds.length + selectedPlanIds.length;
+    if (!count) { window.alert('يرجى تحديد سجل واحد على الأقل.'); return; }
+    const message = 'سيتم حذف ' + selectedVisitIds.length + ' زيارة و' + selectedPlanIds.length + ' خطة تحسين نهائيًا.\nلن تُحذف حسابات المقيمين أو المعلمين أو الإعدادات أو سجل التدقيق.\nهل تؤكد تنفيذ الحذف؟';
+    if (!window.confirm(message)) return;
+    const result = onDeleteRecords(selectedVisitIds, selectedPlanIds);
+    if (!result.success) { window.alert(result.error || 'تعذر تنفيذ الحذف.'); return; }
+    setSelectedVisitIds([]);
+    setSelectedPlanIds([]);
+    setCleanupOpen(false);
+    window.alert('تم حذف ' + result.visitsDeleted + ' زيارة و' + result.plansDeleted + ' خطة تحسين.');
+  };
   const isLeader = ['school_admin', 'platform_admin', 'vice_principal'].includes(currentUser.role);
   const [section, setSection] = useState<Section>('overview');
   const [evaluator, setEvaluator] = useState('ALL');
@@ -112,7 +133,7 @@ export const AdvancedAnalyticsDashboard: React.FC<Props> = ({ currentUser, visit
 
   return <div className="space-y-5 animate-in fade-in duration-300" dir="rtl">
     <div className="rounded-2xl bg-gradient-to-l from-[#172C40] to-[#263f55] text-white p-6 shadow-lg border-b-4 border-[#C6A66A]">
-      <div className="flex flex-wrap items-center justify-between gap-3"><div><div className="text-[#C6A66A] text-xs font-bold mb-2">أَثَر | منظومة التميز والتطوير التعليمي</div><h1 className="text-2xl font-black">لوحة متابعة الزيارات والتقييمات</h1><p className="text-white/70 text-xs mt-2">رؤية إدارية متكاملة للزيارات الصفية، وأداء المقيمين، وتطور المعلمين، وخطط التحسين.</p></div><div className="text-xs bg-white/10 border border-white/15 rounded-lg px-3 py-2">نطاق العرض: {isLeader ? 'جميع سجلات المدرسة' : 'سجلات زياراتك فقط'}</div></div>
+      <div className="flex flex-wrap items-center justify-between gap-3"><div><div className="text-[#C6A66A] text-xs font-bold mb-2">أَثَر | منظومة التميز والتطوير التعليمي</div><h1 className="text-2xl font-black">لوحة متابعة الزيارات والتقييمات</h1><p className="text-white/70 text-xs mt-2">رؤية إدارية متكاملة للزيارات الصفية، وأداء المقيمين، وتطور المعلمين، وخطط التحسين.</p></div><div className="flex items-center gap-2 flex-wrap"><div className="text-xs bg-white/10 border border-white/15 rounded-lg px-3 py-2">نطاق العرض: {isLeader ? 'جميع سجلات المدرسة' : 'سجلات زياراتك فقط'}</div>{isLeader && <button onClick={() => setCleanupOpen(true)} className="inline-flex items-center gap-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white px-3 py-2 text-xs font-bold shadow"><Trash2 className="w-4 h-4"/>إدارة حذف السجلات</button>}</div></div>
     </div>
     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">{sections.map(s => { const Icon=s.icon; return <button key={s.id} onClick={() => setSection(s.id)} className={'flex items-center gap-2 rounded-xl border p-3 text-right text-xs font-bold transition-all ' + (section===s.id ? 'bg-[#172C40] text-white border-[#C6A66A] shadow-md' : 'bg-white text-[#172C40] border-slate-200 hover:border-[#C6A66A]')}><Icon className="w-4 h-4 text-[#C6A66A]"/>{s.label}</button>; })}</div>
     <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
@@ -143,6 +164,17 @@ export const AdvancedAnalyticsDashboard: React.FC<Props> = ({ currentUser, visit
     {section === 'analytics' && <div className="grid md:grid-cols-2 gap-4"><div className="bg-white border rounded-xl p-5"><h3 className="font-bold mb-4">توزيع الزيارات حسب النوع</h3>{[{label:'رسمية',count:full},{label:'سريعة',count:quick}].map(x=><div key={x.label} className="mb-4"><div className="flex justify-between text-xs mb-1"><span>{x.label}</span><b>{x.count}</b></div><div className="h-3 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-[#C6A66A]" style={{width:(filtered.length?x.count/filtered.length*100:0)+'%'}}/></div></div>)}</div><div className="bg-white border rounded-xl p-5"><h3 className="font-bold mb-4">متوسط الإنجاز حسب المادة</h3>{subjects.map(s=>{const rows=filtered.filter(v=>v.subject===s);const avg=rows.length?Math.round(rows.reduce((a,v)=>a+v.achievementPercentage,0)/rows.length):0;return <div key={s} className="mb-3"><div className="flex justify-between text-xs mb-1"><span>{s}</span><b>{avg}% ({rows.length})</b></div><div className="h-2.5 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-[#668575]" style={{width:avg+'%'}}/></div></div>})}</div><div className="bg-white border rounded-xl p-5 md:col-span-2"><h3 className="font-bold mb-3">المؤشرات التي تحتاج إلى تركيز تطويري</h3>{OFFICIAL_INDICATORS.map(ind=>{const ratings=filtered.flatMap(v=>v.indicators.filter(r=>r.indicatorId===ind.id));const needs=ratings.filter(r=>['weak','no','acceptable','needs_improvement'].includes(r.rating)).length;return <div key={ind.id} className="grid grid-cols-[1fr_80px] gap-3 py-2 border-b text-xs"><span>{ind.id}. {ind.text}</span><b className="text-amber-700">{needs} ملاحظة</b></div>})}</div></div>}
     {section === 'archive' && <>{visitTable(filtered.slice().sort((a,b)=>dateValue(b.date).localeCompare(dateValue(a.date))))}<div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-xs text-blue-900">الأرشيف يعرض السجلات المحفوظة حاليًا، ويمكن فتح التقرير الأصلي وطباعته من زر «عرض». لا يُحذف سجل لمجرد تعطيل حساب المقيم.</div></>}
     {section === 'audit' && <div className="space-y-3"><div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-900">سجل التدقيق يعرض العمليات التي تسجلها المنصة حاليًا، مثل تسجيل الدخول وإنشاء الزيارات وتعديلها وإدارة خطط التحسين والإعدادات. السجلات المتاحة حاليًا محفوظة محليًا على هذا المتصفح.</div><div className="bg-white border rounded-xl overflow-x-auto"><table className="w-full min-w-[800px] text-right text-xs"><thead className="bg-[#172C40] text-white"><tr>{['التاريخ والوقت','المستخدم','الصلاحية','العملية','التفاصيل'].map(x=><th className="p-3" key={x}>{x}</th>)}</tr></thead><tbody className="divide-y">{visibleAuditLogs.map(log=><tr key={log.id}><td className="p-3 whitespace-nowrap">{log.timestamp}</td><td className="p-3 font-bold">{log.userName}</td><td className="p-3">{log.userRole}</td><td className="p-3">{log.action}</td><td className="p-3">{log.details}</td></tr>)}</tbody></table>{visibleAuditLogs.length===0&&<div className="p-8 text-center text-slate-400">لا توجد أحداث مسجلة.</div>}</div></div>}
+    {cleanupOpen && isLeader && <div className="fixed inset-0 z-[100] bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-3" role="dialog" aria-modal="true" aria-label="إدارة حذف السجلات">
+      <div className="w-full max-w-4xl max-h-[92vh] overflow-hidden rounded-2xl bg-white shadow-2xl flex flex-col" dir="rtl">
+        <div className="bg-[#172C40] text-white p-4 flex items-center justify-between gap-3"><div><h3 className="font-black text-lg flex items-center gap-2"><Trash2 className="w-5 h-5 text-[#C6A66A]"/>إدارة حذف السجلات</h3><p className="text-xs text-white/70 mt-1">اختر السجلات التي تريد حذفها فقط، أو حدّد الكل لتصفير السجل.</p></div><button onClick={() => setCleanupOpen(false)} className="p-2 rounded-lg hover:bg-white/10" aria-label="إغلاق"><X className="w-5 h-5"/></button></div>
+        <div className="p-4 border-b bg-slate-50 flex flex-wrap items-center justify-between gap-3"><div className="flex gap-2"><button onClick={() => setCleanupTab('visits')} className={'rounded-lg px-4 py-2 text-xs font-bold '+(cleanupTab==='visits'?'bg-[#172C40] text-white':'bg-white border text-slate-700')}>الزيارات والتقييمات ({visits.length})</button><button onClick={() => setCleanupTab('plans')} className={'rounded-lg px-4 py-2 text-xs font-bold '+(cleanupTab==='plans'?'bg-[#172C40] text-white':'bg-white border text-slate-700')}>خطط التحسين ({plans.length})</button></div><div className="text-xs font-bold text-slate-600">المحدد: {selectedVisitIds.length} زيارة و{selectedPlanIds.length} خطة</div></div>
+        <div className="p-4 overflow-y-auto flex-1 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2"><button onClick={cleanupTab==='visits'?selectAllVisits:selectAllPlans} className="text-xs font-bold text-[#172C40] inline-flex items-center gap-2 border rounded-lg px-3 py-2 hover:bg-slate-50"><CheckSquare className="w-4 h-4"/>{(cleanupTab==='visits'?selectedVisitIds.length===visits.length&&visits.length>0:selectedPlanIds.length===plans.length&&plans.length>0)?'إلغاء تحديد الكل':'تحديد الكل'}</button><button onClick={() => {setSelectedVisitIds([]);setSelectedPlanIds([]);}} className="text-xs text-slate-500 underline">إلغاء جميع التحديدات</button></div>
+          {cleanupTab==='visits' ? <div className="space-y-2">{visits.map(v=><label key={v.id} className="flex items-start gap-3 rounded-xl border p-3 hover:bg-slate-50 cursor-pointer"><input type="checkbox" checked={selectedVisitIds.includes(v.id)} onChange={()=>toggleVisit(v.id)} className="mt-1 h-4 w-4 accent-[#172C40]"/><span className="min-w-0 flex-1 text-xs"><b className="text-slate-800">{v.teacherName}</b><span className="text-slate-500"> — {v.evaluatorName}</span><span className="block text-slate-500 mt-1">{v.date} | {v.subject} | {v.grade} / {v.section} | {v.visitType==='full'?'زيارة رسمية':'زيارة سريعة'} | {v.status}</span><span className="block text-[10px] text-slate-400 mt-1">رقم السجل: {v.id}</span></span></label>)}{visits.length===0&&<p className="text-center text-sm text-slate-400 p-8">لا توجد زيارات محفوظة.</p>}</div> : <div className="space-y-2">{plans.map(p=><label key={p.id} className="flex items-start gap-3 rounded-xl border p-3 hover:bg-slate-50 cursor-pointer"><input type="checkbox" checked={selectedPlanIds.includes(p.id)} onChange={()=>togglePlan(p.id)} className="mt-1 h-4 w-4 accent-[#172C40]"/><span className="min-w-0 flex-1 text-xs"><b className="text-slate-800">{p.teacherName}</b><span className="block text-slate-600 mt-1">{p.improvementArea} — {p.developmentalGoal}</span><span className="block text-slate-500 mt-1">موعد المتابعة: {p.followUpDate||'غير محدد'} | الحالة: {p.status}</span><span className="block text-[10px] text-slate-400 mt-1">رقم الخطة: {p.id}</span></span></label>)}{plans.length===0&&<p className="text-center text-sm text-slate-400 p-8">لا توجد خطط تحسين محفوظة.</p>}</div>}
+        </div>
+        <div className="border-t p-4 bg-slate-50 flex flex-wrap items-center justify-between gap-3"><p className="text-[10px] text-slate-500 max-w-xl">الحذف لا يشمل حسابات المستخدمين أو دليل المعلمين أو الإعدادات أو سجل التدقيق. لا يتم حذف أي سجل دون تأكيدك النهائي.</p><div className="flex gap-2"><button onClick={()=>setCleanupOpen(false)} className="rounded-lg border bg-white px-4 py-2 text-xs font-bold">إلغاء</button><button onClick={executeCleanup} disabled={!selectedVisitIds.length&&!selectedPlanIds.length} className="rounded-lg bg-rose-600 disabled:opacity-40 text-white px-4 py-2 text-xs font-bold inline-flex items-center gap-2"><Trash2 className="w-4 h-4"/>حذف المحدد ({selectedVisitIds.length+selectedPlanIds.length})</button></div></div>
+      </div>
+    </div>}
     <div className="text-[10px] text-slate-400 flex items-center gap-2"><ShieldCheck className="w-3.5 h-3.5"/> يتم تطبيق نطاق العرض حسب صلاحية الحساب الحالي. لا تُعرض بيانات المعلمين لمستخدم غير مخول.</div>
   </div>;
 };
