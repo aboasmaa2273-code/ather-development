@@ -12,6 +12,7 @@ import { AtharStorageService } from './services/storageService';
 import { Header } from './components/Header';
 import { PublicHome } from './components/PublicHome';
 import { Dashboard } from './components/Dashboard';
+import { AdvancedAnalyticsDashboard } from './components/AdvancedAnalyticsDashboard';
 import { TeachersList } from './components/TeachersList';
 import { VisitsList } from './components/VisitsList';
 import { VisitForm } from './components/VisitForm';
@@ -165,6 +166,17 @@ export default function App() {
             onNavigate={handleNavigate}
             onOpenVisitReport={(v) => setSelectedVisitForReport(v)}
             language={language}
+          />
+        )}
+
+        {isLoggedIn && activeTab === 'analytics' && (
+          <AdvancedAnalyticsDashboard
+            currentUser={currentUser}
+            visits={visits}
+            teachers={teachers}
+            plans={plans}
+            auditLogs={auditLogs}
+            onOpenVisitReport={(v) => setSelectedVisitForReport(v)}
           />
         )}
 
