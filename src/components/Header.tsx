@@ -7,7 +7,8 @@ import {
   Database, 
   LogOut, 
   Globe, 
-  Sliders 
+  Sliders,
+  ChartNoAxesCombined
 } from 'lucide-react';
 import { translations, Language } from '../i18n/translations';
 
@@ -92,6 +93,16 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   {t.nav.dashboard}
                 </button>
+
+                {['school_admin', 'platform_admin', 'vice_principal'].includes(currentUser.role) && (
+                  <button
+                    onClick={() => onTabChange('analytics')}
+                    className={`px-3 py-2 text-sm font-semibold rounded-md transition-colors whitespace-nowrap flex items-center gap-1.5 ${activeTab === 'analytics' ? 'bg-[#C6A66A] text-[#172C40]' : 'text-white/85 hover:text-white hover:bg-white/10'}`}
+                  >
+                    <ChartNoAxesCombined className="w-3.5 h-3.5" />
+                    <span>لوحة المتابعة</span>
+                  </button>
+                )}
 
                 <button
                   onClick={() => onTabChange('teachers')}
@@ -234,6 +245,15 @@ export const Header: React.FC<HeaderProps> = ({
             >
               {t.nav.dashboard}
             </button>
+            {['school_admin', 'platform_admin', 'vice_principal'].includes(currentUser.role) && (
+              <button
+                onClick={() => onTabChange('analytics')}
+                className={`px-3 py-1.5 rounded whitespace-nowrap font-medium flex items-center gap-1 ${activeTab === 'analytics' ? 'bg-[#C6A66A] text-[#172C40]' : 'text-white/80'}`}
+              >
+                <ChartNoAxesCombined className="w-3.5 h-3.5" />
+                <span>لوحة المتابعة</span>
+              </button>
+            )}
             <button
               onClick={() => onTabChange('teachers')}
               className={`px-3 py-1.5 rounded whitespace-nowrap font-medium ${activeTab === 'teachers' ? 'bg-[#C6A66A] text-[#172C40]' : 'text-white/80'}`}
