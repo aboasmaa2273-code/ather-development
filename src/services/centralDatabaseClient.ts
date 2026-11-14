@@ -12,6 +12,24 @@ export type CentralApiResponse<T = unknown> = {
   [key: string]: unknown;
 };
 
+
+export type CentralSessionUser = {
+  userId: string;
+  name: string;
+  role: 'platform_admin' | 'school_admin' | 'vice_principal' | 'evaluator' | 'teacher';
+  schoolId: string;
+  jobNumber?: string;
+};
+
+export type CentralSession = {
+  token: string;
+  user: CentralSessionUser;
+  expiresIn: number;
+};
+
+const SESSION_KEY = 'athar_central_session_v1';
+const CLIENT_ID = 'ather-web-client';
+
 export class CentralDatabaseClient {
   static getEndpoint(): string {
     try { return localStorage.getItem(CONFIG_KEY) || ''; } catch { return ''; }
@@ -86,6 +104,66 @@ export class CentralDatabaseClient {
       try { form.submit(); }
       catch { finish({ success: false, error: 'تعذر إرسال الطلب إلى خادم قاعدة البيانات.' }); }
     });
+  }
+
+
+  /** تسجيل الدخول المركزي؛ لا يحفظ كلمة المرور، ويحفظ رمز الجلسة في sessionStorage فقط. */
+  static async login(username: string, password: string): Promise<CentralApiResponse<CentralSession>> {
+    const result = await this.request<CentralSession>({
+      action: 'login',
+      username: String(username || '').trim(),
+      password: String(password || ''),
+      clientId: CLIENT_ID
+    });
+    if (!result.success) return result;
+    const session = result as CentralApiResponse<CentralSession> & Partial<CentralSession>;
+    if (!session.token || !session.user?.userId || !session.user?.role) {
+      return { success: false, error: 'استجابة تسجيل الدخول من الخادم غير مكتملة.' };
+    }
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+        token: session.token,
+        user: session.user,
+        expiresAt: Date.now() + Math.max(0, Number(session.expiresIn) || 0) * 1000
+      }));
+    } catch {
+      return { success: false, error: 'تعذر حفظ جلسة الدخول المؤقتة في هذا المتصفح.' };
+    }
+    return result;
+  }
+
+  static getSession(): { token: string; user: CentralSessionUser; expiresAt: number } | null {
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (!raw) return null;
+      const session = JSON.parse(raw);
+      if (!session?.token || !session?.user?.userId || !session?.expiresAt || session.expiresAt <= Date.now()) {
+        sessionStorage.removeItem(SESSION_KEY);
+        return null;
+      }
+      return session;
+    } catch {
+      return null;
+    }
+  }
+
+  static async listRecords(entity: 'teachers' | 'visits' | 'plans' | 'settings' | 'visitors'): Promise<CentralApiResponse> {
+    const session = this.getSession();
+    if (!session) return { success: false, error: 'انتهت جلسة الدخول المركزي أو لم يتم تسجيل الدخول.' };
+    return this.request({ action: 'list', entity, token: session.token, clientId: CLIENT_ID });
+  }
+
+  static async saveRecord(entity: 'teachers' | 'visits' | 'plans' | 'settings' | 'visitors', record: Record<string, unknown>): Promise<CentralApiResponse> {
+    const session = this.getSession();
+    if (!session) return { success: false, error: 'انتهت جلسة الدخول المركزي أو لم يتم تسجيل الدخول.' };
+    return this.request({ action: 'upsert', entity, record, token: session.token, clientId: CLIENT_ID });
+  }
+
+  static async logout(): Promise<CentralApiResponse> {
+    const session = this.getSession();
+    try { sessionStorage.removeItem(SESSION_KEY); } catch { /* ignore unavailable session storage */ }
+    if (!session) return { success: true };
+    return this.request({ action: 'logout', token: session.token, clientId: CLIENT_ID });
   }
 
   static async testConnection(): Promise<CentralApiResponse> {
